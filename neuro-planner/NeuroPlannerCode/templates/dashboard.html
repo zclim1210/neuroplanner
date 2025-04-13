@@ -1,0 +1,910 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+{% endblock %}
+
+
+{% block content %}
+<div class="dashboard">
+    <div class="current-projects">
+        <h2>Current Engagement</h2>
+        {% if session['user_role'] == 'Partner' %}
+        <button type="button" class="modern-button" onclick="openCreateEngagementModal()">Create Engagement</button>
+        {% endif %}
+        <div class="engagement-slider">
+            {% if engagements %}
+            <button id="prev-engagement" class="engagement-nav"><i class="fas fa-chevron-left"></i></button>
+            <div class="engagement-wrapper">
+                <div class="engagements">
+                    {% for engagement in engagements %}
+                    <div class="card project-card" style="background-color: {{ engagement.partner_color }};">
+                        <h3>
+                            <a href="{{ url_for('views.task') }}?engagement_id={{ engagement._id }}">
+                                {{ engagement.clientName }}
+                            </a>
+                        </h3>
+                        <div class="team">
+                            {% for member in engagement.member_details %}
+                            <div class="member">
+                                <img src="{{ url_for('static', filename='images/' + member['photo']) }}" alt="{{ member['name'] }}" title="{{ member['name'] }}">
+                                <div class="tooltip">{{ member['name'] }}</div>
+                            </div>
+                            {% endfor %}
+                            {% if engagement.manager_details %}
+                            <div class="manager">
+                                <img src="{{ url_for('static', filename='images/' + engagement.manager_details['photo']) }}" alt="{{ engagement.manager_details['name'] }}" title="{{ engagement.manager_details['name'] }}">
+                                <div class="tooltip">{{ engagement.manager_details['name'] }}</div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="progress-container" id="progress-{{ engagement._id }}"></div>
+                        <p><i class="fas fa-tasks"></i> {{ engagement.complete_tasks }}/{{ engagement.total_tasks }} Tasks Completed</p>
+                        <p><i class="fas fa-calendar-alt"></i> {{ engagement.formatted_endDate }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <button id="next-engagement" class="engagement-nav"><i class="fas fa-chevron-right"></i></button>
+            {% else %}
+            <!-- Message displayed when there are no engagements -->
+            <p>You have no current engagements.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+<div class="utilization-section">
+    <!-- General View -->
+    <div id="general-view" class="utilization-view">
+        <h3>General Utilization (Last 30 Days)</h3>
+        <label for="roleSelector">Select Role:</label>
+        <select id="roleSelector" onchange="updateEmployeeList()">
+            <option value="">Select a Role</option>
+            <option value="Manager">Manager</option>
+            <option value="Associate">Associate</option>
+            <option value="Pending Approval">Pending Approval</option>
+            <option value="Human Resources">Human Resources</option>
+            <option value="Partner">Partner</option>
+            <option value="Senior Associate">Senior Associate</option>
+        </select>
+
+        <label for="employeeSelector">Select Employee:</label>
+        <select id="employeeSelector" onchange="displayEmployeeChart()">
+            <option value="">Select an Employee</option>
+        </select>
+
+        <!-- Unified rate display -->
+        <div id="rateDisplayGeneral" class="rate-display">
+            <span id="utilizationRate"></span> | <span id="overloadRate"></span>
+        </div>
+        <canvas id="employeeChart" width="600" height="400"></canvas>
+    </div>
+
+    <!-- Engagement View -->
+    <div id="engagement-view" class="utilization-view">
+        <h3>Engagement-Specific Utilization</h3>
+        <label for="engagementSelector">Select Engagement:</label>
+        <select id="engagementSelector" onchange="updateEngagementEmployeeList()">
+            <option value="">Select an Engagement</option>
+            {% for engagement in engagements %}
+                <option value="{{ engagement._id }}">{{ engagement.clientName }}</option>
+            {% endfor %}
+        </select>
+
+            <!-- Unified rate display for Engagement View -->
+        <div id="rateDisplayEngagement" class="rate-display">
+            <span id="estimatedRecoveryRate"></span> | <span id="actualRecoveryRate"></span>
+            <div id="engagementAdviceDisplay" class="advice-display"></div>
+        </div>
+
+        <canvas id="engagementEmployeeChart" width="600" height="400"></canvas>
+    </div>
+</div>
+
+
+<!-- Modal for creating engagement -->
+<div id="createEngagementModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeCreateEngagementModal()">&times;</span>
+        <h2>Create Engagement</h2>
+        <form id="createEngagementForm">
+            <div class="form-group">
+                <label for="clientName">Client Name:</label>
+                <input type="text" id="clientName" name="clientName" required>
+            </div>
+            <div class="form-group">
+                <label for="industry">Industry:</label>
+                <select id="industry" name="industry">
+                    <option value="" selected disabled>Select an industry</option>
+                    <option value="Financial Services">Financial Services</option>
+                    <option value="Technology">Technology</option>
+                    <option value="Manufacturing">Manufacturing</option>
+                    <option value="Insurance">Insurance</option>
+                    <option value="Education">Education</option>
+                    <option value="Other">Other</option>
+                </select>
+                <input type="text" id="industry_other" name="industry_other" style="display:none;" placeholder="Please specify">
+            </div>
+            <div class="form-group">
+                <label>Recommended Employees</label>
+                <div id="recommendations-container" class="recommendations-container">
+                </div>
+            </div>
+            <div id="performance-chart-section">
+                <h3>Employee Performance Chart</h3>
+                <div id="performance-chart-container">
+                    <canvas id="employeePerformanceChart" width="600" height="400"></canvas>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="auditYear">Audit Year:</label>
+                <input type="date" id="auditYear" name="auditYear" required>
+            </div>
+            <div class="form-group">
+                <label for="description">Description:</label>
+                <textarea id="description" name="description" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="budget">Budget:</label>
+                <input type="number" id="budget" name="budget" required>
+            </div>
+            <div class="form-group">
+                <label for="manager">Manager:</label>
+                <select id="manager" name="manager_id" required>
+                    <!-- Options will be populated via JavaScript -->
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="members">Members:</label>
+                <div id="members-container">
+                    <div class="member-select">
+                        <select id="member-dropdown" name="member_ids[]" class="member-dropdown">
+                            <!-- Options will be populated via JavaScript -->
+                        </select>
+                    </div>
+                </div>
+                <div class="add-member-button">
+                    <button type="button" onclick="addMemberField()">Add Member</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="location">Location:</label>
+                <input type="text" id="location" name="location" required>
+            </div>
+            <div class="form-group">
+                <label for="estStartDate">Estimated Start Date:</label>
+                <input type="date" id="estStartDate" name="estStartDate" required>
+            </div>
+            <div class="form-group">
+                <label for="estEndDate">Estimated End Date:</label>
+                <input type="date" id="estEndDate" name="estEndDate" required>
+            </div>
+            <button type="button" onclick="createEngagement()">Create</button>
+        </form>
+    </div>
+</div>
+
+<!-- Notification container for Create Engagement success -->
+<div id="engagementNotification" class="notification-container">
+    <div class="notification-content">
+        <i class="material-icons notification-icon">check_circle</i>
+        <div class="notification-text">Engagement created successfully!</div>
+        <span class="close-notification" onclick="closeEngagementNotification()">×</span>
+    </div>
+</div>
+
+
+
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/progressbar.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        console.log("Initializing default chart for logged-in user");
+
+        const utilizationData = {{ general_utilization_data | tojson | safe }};
+        const engagementUtilizationData = {{ engagement_utilization_data | tojson | safe }};
+        const loggedInUserId = "{{ logged_in_user_id }}";
+        console.log("General Utilization Data:", utilizationData);
+        console.log("Engagement Utilization Data:", engagementUtilizationData);
+
+        // Display chart and metrics for logged-in user by default in General View
+        displayEmployeeChart(loggedInUserId);
+
+        // Default engagement selection
+        const engagementSelector = document.getElementById("engagementSelector");
+        if (engagementSelector.options.length > 1) { // Ensure options are available
+            engagementSelector.selectedIndex = 1; // Select the first engagement
+            const defaultEngagementId = engagementSelector.value;
+            
+            console.log(`Debug: Default selected engagement ID: ${defaultEngagementId}`);
+            
+            // Trigger the display of the engagement-specific chart
+            updateEngagementEmployeeList();
+        }
+
+        // Update Employee list based on selected role in General View
+        async function updateEmployeeList() {
+            const selectedRole = document.getElementById("roleSelector").value;
+            const employeeSelector = document.getElementById("employeeSelector");
+            employeeSelector.innerHTML = "<option value=''>Select an Employee</option>";
+
+            if (!selectedRole) return;
+
+            // Fetch staff by level using the /get_staff endpoint
+            try {
+                const response = await fetch(`/get_staff?level=${selectedRole}`);
+                const staffList = await response.json();
+
+                staffList.forEach(employee => {
+                    const option = document.createElement("option");
+                    option.value = employee.id;
+                    option.textContent = employee.name;
+                    employeeSelector.appendChild(option);
+                });
+            } catch (error) {
+                console.error("Error fetching staff by level:", error);
+            }
+        }
+
+        // Display chart and rates for selected employee in General View
+        function displayEmployeeChart(employeeId = loggedInUserId) {
+            const data = utilizationData[employeeId];
+            if (data) {
+                const ctx = document.getElementById("employeeChart").getContext("2d");
+
+                if (window.employeeChartInstance) {
+                    window.employeeChartInstance.destroy();
+                }
+
+                // Calculate Utilization and Overload Rates
+                const totalChargedHours = Object.values(data.charged_hours).reduce((sum, hours) => sum + hours, 0);
+                const totalAllocatedHours = Object.values(data.allocated_hours).reduce((sum, hours) => sum + hours, 0);
+                
+                const utilizationRate = ((totalChargedHours / 160) * 100).toFixed(2);
+                // Overload Rate calculation based on the new logic
+                let overloadRate;
+                if (totalAllocatedHours > 160) {
+                    overloadRate = (((totalAllocatedHours - 160) / 160) * 100).toFixed(2);
+                } else {
+                    overloadRate = 0;
+                }
+
+                // Display rates with conditional formatting
+                document.getElementById("utilizationRate").textContent = `Utilization Rate: ${utilizationRate}%`;
+                document.getElementById("overloadRate").textContent = `Overload Rate: ${overloadRate}%`;
+
+                // Apply colors based on thresholds
+                document.getElementById("utilizationRate").style.color = utilizationRate < 80 ? 'red' : 'black';
+                document.getElementById("overloadRate").style.color = overloadRate > 0 ? 'red' : 'black';
+
+                const chartData = {
+                    labels: Array.from(new Set([
+                        ...Object.keys(data.charged_hours), 
+                        ...Object.keys(data.allocated_hours)
+                    ])).sort(), // Collect unique dates and sort them
+
+                    datasets: [
+                        {
+                            label: 'Charged Hours',
+                            data: Object.entries(data.charged_hours).map(([date, hours]) => ({
+                                x: new Date(date), // Convert to Date object
+                                y: hours
+                            })),
+                            borderColor: 'blue',
+                            fill: false
+                        },
+                        {
+                            label: 'Allocated Hours',
+                            data: Object.entries(data.allocated_hours).map(([date, hours]) => ({
+                                x: new Date(date), // Convert to Date object
+                                y: hours
+                            })),
+                            borderColor: 'purple',
+                            fill: false
+                        }
+                    ]
+                };
+
+                // Render the chart
+                window.employeeChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: chartData,
+                    options: {
+                        scales: {
+                            x: { 
+                                type: 'time',
+                                time: { unit: 'day' },
+                                title: { display: true, text: 'Date' }
+                            },
+                            y: { 
+                                beginAtZero: true,
+                                suggestedMax: 100
+                            }
+                        },
+                        plugins: {
+                            legend: { display: true, position: 'top' },
+                            tooltip: {
+                                mode: 'nearest', // Change mode to 'nearest'
+                                intersect: false,
+                                callbacks: {
+                                    title: function(tooltipItems) {
+                                        return tooltipItems[0].label.split(', ')[0];
+                                    },
+                                    label: function(tooltipItem) {
+                                        const label = tooltipItem.dataset.label || '';
+                                        return `${label}: ${tooltipItem.raw.y} Hours`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                console.warn("No data found for employee ID:", employeeId);
+            }
+        }
+
+
+        async function updateEngagementEmployeeList() {
+            const selectedEngagementId = document.getElementById("engagementSelector").value;
+
+            console.log(`Debug: Selected engagement ID: ${selectedEngagementId}`); // Log the selected engagement ID
+
+            try {
+                // Fetch data for the selected engagement dynamically
+                const response = await fetch(`/get_engagement_data?engagement_id=${selectedEngagementId}`);
+                const data = await response.json();
+
+                if (data && data.charged_hours && data.allocated_hours) {
+                    displayEngagementEmployeeChart(data);
+                } else {
+                    console.warn("No data found for the selected engagement. Clearing chart.");
+                    clearEngagementEmployeeChart();
+                    document.getElementById("recoveryRatesDisplay").innerHTML = `
+                        <p style="color: red;">Error: No data available for the selected engagement.</p>
+                    `;
+                }
+            } catch (error) {
+                console.error("Error fetching data for selected engagement:", error);
+                clearEngagementEmployeeChart();
+                document.getElementById("recoveryRatesDisplay").innerHTML = `
+                    <p style="color: red;">Error: Unable to fetch data for the selected engagement.</p>
+                `;
+            }
+        }
+
+        function clearEngagementEmployeeChart() {
+            const ctx = document.getElementById("engagementEmployeeChart").getContext("2d");
+            if (window.engagementEmployeeChartInstance) {
+                window.engagementEmployeeChartInstance.destroy();
+            }
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        }
+
+        function displayEngagementEmployeeChart(data) {
+            if (!data) {
+                console.warn("No data found for engagement.");
+                return;
+            }
+
+            const ctx = document.getElementById("engagementEmployeeChart").getContext("2d");
+            if (window.engagementEmployeeChartInstance) {
+                window.engagementEmployeeChartInstance.destroy();
+            }
+
+            const datasets = [];
+
+            // Prepare each employee's charged hours line with area fill and curvature
+            for (const [employeeId, details] of Object.entries(data.charged_hours)) {
+                datasets.push({
+                    label: `Employee ${details.name} Charged Hours`,
+                    data: Object.entries(details.hours).map(([date, hours]) => ({
+                        x: date,
+                        y: hours
+                    })),
+                    borderColor: getRandomColor(),
+                    backgroundColor: getRandomColor(),
+                    fill: true,
+                    lineTension: 0.4
+                });
+            }
+
+            // Prepare allocated hours line with area fill and curvature
+            datasets.push({
+                label: 'Total Allocated Hours',
+                data: Object.entries(data.allocated_hours).map(([date, hours]) => ({
+                    x: date,
+                    y: hours
+                })),
+                borderColor: 'purple',
+                backgroundColor: 'rgba(128, 0, 128, 0.3)',
+                fill: true,
+                lineTension: 0.4
+            });
+
+            // Render the chart
+            window.engagementEmployeeChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: { datasets: datasets },
+                options: {
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: { unit: 'day' },
+                            title: { display: true, text: 'Date' },
+                            stacked: true
+                        },
+                        y: {
+                            beginAtZero: true,
+                            stacked: true,
+                            title: { display: true, text: 'Hours' }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: true, position: 'top' },
+                        tooltip: { mode: 'nearest', intersect: false }
+                    },
+                    interaction: { mode: 'nearest', intersect: false }
+                }
+            });
+
+            // Update the engagement-specific rate display with checks for element existence
+            const estimatedRecoveryRateEl = document.getElementById("estimatedRecoveryRate");
+            const actualRecoveryRateEl = document.getElementById("actualRecoveryRate");
+            const adviceDisplayEl = document.getElementById("engagementAdviceDisplay");  // New element for advice
+
+            if (estimatedRecoveryRateEl) {
+                estimatedRecoveryRateEl.textContent = `Estimated Recovery Rate: ${data.estimated_recovery_rate ? data.estimated_recovery_rate.toFixed(2) : 'N/A'}%`;
+            } else {
+                console.warn("Element 'estimatedRecoveryRate' not found in the DOM.");
+            }
+
+            if (actualRecoveryRateEl) {
+                actualRecoveryRateEl.textContent = `Actual Recovery Rate: ${data.actual_recovery_rate ? data.actual_recovery_rate.toFixed(2) : 'N/A'}%`;
+            } else {
+                console.warn("Element 'actualRecoveryRate' not found in the DOM.");
+            }
+
+            // Display the advice message
+            if (adviceDisplayEl) {
+                adviceDisplayEl.textContent = `Advice: ${data.advice || 'No advice available.'}`;
+            } else {
+                console.warn("Element 'engagementAdviceDisplay' not found in the DOM.");
+            }
+
+            // Additional Debugging
+            console.log("Engagement chart data:", data);
+        }
+
+
+
+
+        // Attach event listeners to dropdowns
+        document.getElementById("roleSelector").addEventListener("change", updateEmployeeList);
+        document.getElementById("employeeSelector").addEventListener("change", function() {
+            const selectedEmployeeId = this.value;
+            displayEmployeeChart(selectedEmployeeId);
+        });
+        document.getElementById("engagementSelector").addEventListener("change", updateEngagementEmployeeList);
+    });
+</script>
+
+
+
+
+<!-- Existing Script for Progress Bars and Engagement Slider -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        {% for engagement in engagements %}
+        var progressBarContainer = document.getElementById('progress-{{ engagement._id }}');
+        var bar = new ProgressBar.Circle(progressBarContainer, {
+            color: '#aaa',
+            strokeWidth: 8,
+            trailWidth: 4,
+            easing: 'easeInOut',
+            duration: 1400,
+            text: {
+                value: '0%',
+                style: {
+                    color: 'white',
+                    position: 'absolute',
+                    left: '50%',
+                    top: '50%',
+                    padding: 0,
+                    margin: 0,
+                    transform: {
+                        prefix: true,
+                        value: 'translate(-50%, -50%)'
+                    }
+                },
+                autoStyleContainer: false
+            },
+            from: { color: '#66BB6A', width: 8 },
+            to: { color: '#FFEA82', width: 8 },
+            step: function(state, circle) {
+                circle.path.setAttribute('stroke', state.color);
+                circle.path.setAttribute('stroke-width', state.width);
+                var value = Math.round(circle.value() * 100);
+                if (value === 0) {
+                    circle.setText('');
+                } else {
+                    circle.setText(value + '%');
+                }
+            }
+        });
+        bar.text.style.fontFamily = '"Raleway", Helvetica, sans-serif';
+        bar.text.style.fontSize = '1.5rem';
+        bar.animate({{ engagement.task_completion_percentage }} / 100);
+        {% endfor %}
+
+        const searchInput = document.getElementById('searchTasks');
+        searchInput.addEventListener('input', function() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const tasks = document.querySelectorAll('.task-item');
+
+            tasks.forEach(task => {
+                const description = task.dataset.description.toLowerCase();
+                const engagement = task.dataset.engagement.toLowerCase();
+
+                if (description.includes(searchTerm) || engagement.includes(searchTerm)) {
+                    task.style.display = 'flex';
+                } else {
+                    task.style.display = 'none';
+                }
+            });
+        });
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+    const engagementWrapper = document.querySelector('.engagement-wrapper');
+    const engagementsContainer = document.querySelector('.engagements');
+    let engagementCards = document.querySelectorAll('.card');
+    let isTransitioning = false;
+
+    // Clone first and last engagement for circular effect
+    const firstClone = engagementCards[0].cloneNode(true);
+    const lastClone = engagementCards[engagementCards.length - 1].cloneNode(true);
+
+    engagementsContainer.appendChild(firstClone);
+    engagementsContainer.insertBefore(lastClone, engagementCards[0]);
+
+    engagementCards = document.querySelectorAll('.card'); // Update NodeList after cloning
+    const cardWidth = engagementCards[0].offsetWidth + 20; // 300px width + 20px margin (adjust as per your margin)
+    let currentIndex = 1;
+
+    engagementsContainer.style.transform = `translateX(-${cardWidth * currentIndex}px)`;
+
+    function updateEngagementScroll() {
+        engagementsContainer.style.transition = 'transform 0.5s ease-in-out';
+        engagementsContainer.style.transform = `translateX(-${cardWidth * currentIndex}px)`;
+    }
+
+    document.getElementById('prev-engagement').addEventListener('click', function () {
+        if (isTransitioning) return;
+        isTransitioning = true;
+        currentIndex--;
+        updateEngagementScroll();
+    });
+
+    document.getElementById('next-engagement').addEventListener('click', function () {
+        if (isTransitioning) return;
+        isTransitioning = true;
+        currentIndex++;
+        updateEngagementScroll();
+    });
+
+    engagementsContainer.addEventListener('transitionend', () => {
+        isTransitioning = false;
+        if (currentIndex === 0) {
+            engagementsContainer.style.transition = 'none';
+            currentIndex = engagementCards.length - 2;
+            engagementsContainer.style.transform = `translateX(-${cardWidth * currentIndex}px)`;
+        }
+        if (currentIndex === engagementCards.length - 1) {
+            engagementsContainer.style.transition = 'none';
+            currentIndex = 1;
+            engagementsContainer.style.transform = `translateX(-${cardWidth * currentIndex}px)`;
+        }
+    });
+
+    // Automatically start at the first real engagement card
+    updateEngagementScroll();
+});
+
+
+
+function openCreateEngagementModal() {
+    console.log("Opening Create Engagement Modal");
+    document.getElementById('createEngagementModal').style.display = "block";
+    // Ensure the chart is updated if data is available
+    if (window.performanceTrendsData) {
+        renderEmployeePerformanceChart(window.performanceTrendsData);
+    }
+}
+
+function showEngagementNotification() {
+    const notification = document.getElementById('engagementNotification');
+    notification.classList.add('show');
+
+    // Automatically close the notification after 3 seconds
+    setTimeout(() => {
+        notification.classList.remove('show');
+    }, 3000);
+}
+
+
+
+function closeCreateEngagementModal() {
+    console.log("Closing Create Engagement Modal");
+    document.getElementById('createEngagementModal').style.display = "none";
+}
+
+function addMemberField() {
+    console.log("Adding a new member field");
+    const membersContainer = document.getElementById('members-container');
+    const memberTemplate = document.getElementById('member-template');
+    console.log("Member template innerHTML before adding field:", memberTemplate.innerHTML);
+    
+    const memberSelect = document.createElement('div');
+    memberSelect.classList.add('member-select');
+    memberSelect.innerHTML = `
+        <select name="member_ids[]" class="member-dropdown">
+            ${memberTemplate.innerHTML}
+        </select>
+        <button type="button" onclick="removeMemberField(this)">-</button>
+    `;
+    membersContainer.appendChild(memberSelect);
+    
+    console.log("Updated members-container innerHTML:", membersContainer.innerHTML);
+}
+
+function removeMemberField(button) {
+    const memberGroup = button.parentElement;
+    memberGroup.remove();
+    console.log("Removed member field, updated members-container innerHTML:", document.getElementById('members-container').innerHTML);
+}
+
+function toggleIndustryOther(select) {
+    console.log("Toggling industry other field");
+    const industryOther = document.getElementById('industry_other');
+    if (select.value === 'Other') {
+        industryOther.style.display = 'block';
+    } else {
+        industryOther.style.display = 'none';
+    }
+}
+
+function createEngagement() {
+    const form = document.getElementById('createEngagementForm');
+    const formData = new FormData(form);
+
+    // Convert formData to JSON
+    const jsonData = {};
+    formData.forEach((value, key) => {
+        if (key === "member_ids[]") {
+            if (!jsonData[key]) {
+                jsonData[key] = [];
+            }
+            jsonData[key].push(value);
+        } else {
+            jsonData[key] = value;
+        }
+    });
+
+    console.log("Form data to be sent:", jsonData);
+
+    fetch('{{ url_for("views.create_engagement_route") }}', {
+        method: 'POST',
+        body: JSON.stringify(jsonData),
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+            showEngagementNotification();  // Show success notification
+        } else {
+            alert('Failed to create engagement.');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    console.log("Document fully loaded, fetching employee options");
+    fetch('{{ url_for("views.get_employee_options") }}')
+        .then(response => {
+            console.log("Response from get_employee_options:", response);
+            return response.json();
+        })
+        .then(data => {
+            console.log("Employee options data:", data);
+            const managerSelect = document.getElementById('manager');
+            const memberSelect = document.getElementById('member-dropdown');
+            const memberTemplate = document.createElement('template');
+            data.forEach(employee => {
+                console.log("Processing employee:", employee);
+                if (employee.role === 'Manager') {
+                    const option = document.createElement('option');
+                    option.value = employee.id;
+                    option.textContent = employee.name;
+                    managerSelect.appendChild(option);
+                    console.log("Added manager option:", option);
+                } else if (["Associate", "Senior Associate"].includes(employee.role)) {
+                    const option = document.createElement('option');
+                    option.value = employee.id;
+                    option.textContent = employee.name;
+                    memberSelect.appendChild(option); // Add to the initial member dropdown
+                    memberTemplate.innerHTML += option.outerHTML;
+                    console.log("Added member option:", option);
+                }
+            });
+            document.getElementById('member-template').innerHTML = memberTemplate.innerHTML;
+            console.log("Final member template innerHTML:", memberTemplate.innerHTML);
+        })
+        .catch(error => {
+            console.error('Error fetching employee options:', error);
+        });
+});
+
+
+
+    document.getElementById('industry').addEventListener('change', function(event) {
+    const selectedIndustry = event.target.value;
+    fetchRecommendedEmployees(selectedIndustry);
+    toggleIndustryOther(event.target)
+});
+
+function fetchRecommendedEmployees(industry) {
+    fetch('/get_recommended_employees_knn', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ industry: industry })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log("API Response:", data); // Log entire response to check structure
+        if (data.success) {
+            displayRecommendedEmployees(data.employees, data.performance_trends);
+        } else {
+            console.error("Failed to fetch recommended employees:", data.message);
+            document.getElementById('recommendations-container').innerHTML = "No recommendations found.";
+            const performanceChartContainer = document.getElementById('performance-chart-container');
+            if (performanceChartContainer) {
+                performanceChartContainer.style.display = 'none';
+            }
+        }
+    })
+    .catch(error => {
+        console.error("Error fetching recommended employees:", error);
+        document.getElementById('recommendations-container').innerHTML = "Error loading recommendations.";
+        const performanceChartContainer = document.getElementById('performance-chart-container');
+        if (performanceChartContainer) {
+            performanceChartContainer.style.display = 'none';
+        }
+    });
+}
+// Updated displayRecommendedEmployees to store performance trends globally
+function displayRecommendedEmployees(employees, performanceTrends) {
+    const recommendationsContainer = document.getElementById('recommendations-container');
+
+    recommendationsContainer.innerHTML = ""; // Clear previous recommendations
+
+    employees.forEach((employee, index) => {
+        const employeeCard = document.createElement('div');
+        employeeCard.classList.add('employee-card');
+
+        const rank = index + 1;
+        const rankText = rank === 1 ? 'Top Choice' : rank === 2 ? 'Second Choice' : 'Third Choice';
+
+        employeeCard.innerHTML = `
+            <div class="rank-label">${rankText}</div>
+            <img src="/static/images/${employee.photo}" alt="${employee.name}">
+            <p>${employee.name}</p>
+        `;
+        recommendationsContainer.appendChild(employeeCard);
+    });
+
+    console.log("Recommended employees displayed:", employees);
+
+    // Store performance trends data globally to access when the modal is opened
+    window.performanceTrendsData = performanceTrends;
+
+    if (performanceTrends && performanceTrends.length > 0) {
+        document.getElementById('performance-chart-container').style.display = 'block';
+        renderEmployeePerformanceChart(performanceTrends);
+    } else {
+        document.getElementById('performance-chart-container').style.display = 'none';
+        console.warn("No performance trends data available; chart will not be rendered.");
+    }
+}
+
+function renderEmployeePerformanceChart(performanceTrends) {
+    const canvas = document.getElementById('employeePerformanceChart');
+    
+    if (!canvas) {
+        console.error("Canvas element not found for employee performance chart");
+        return;
+    }
+
+    const ctx = canvas.getContext('2d');
+
+    // Destroy previous chart if it exists
+    if (window.employeePerformanceChart && typeof window.employeePerformanceChart.destroy === 'function') {
+        window.employeePerformanceChart.destroy();
+    }
+
+    const datasets = performanceTrends.map(trend => ({
+        label: trend.name,
+        data: trend.scores.map(score => ({ x: score.date, y: score.score })),
+        fill: false,
+        borderColor: getRandomColor(),
+        tension: 0.1
+    }));
+
+    window.employeePerformanceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'day'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Date'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Performance Score'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    enabled: true
+                }
+            }
+        }
+    });
+}
+
+function getRandomColor() {
+    const letters = '0123456789ABCDEF';
+    let color = '#';
+    for (let i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+}
+
+</script>
+<template id="member-template"></template>
+{% endblock %}

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Neuro Planner{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.webix.com/edge/webix.css" type="text/css">
+    <script src="https://cdn.webix.com/edge/webix.js" type="text/javascript"></script>
+    {% block extra_styles %}{% endblock %}
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        {% block sidebar %}
+        <div class="logo">
+            <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo">
+        </div>
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('views.dashboard') }}" class="{% if request.endpoint == 'views.dashboard' %}active{% endif %}"><i class="fas fa-home"></i></a></li>
+                <li><a href="{{ url_for('views.scheduler') }}" class="{% if request.endpoint == 'views.scheduler' %}active{% endif %}"><i class="fas fa-calendar-alt"></i></a></li>
+                <li><a href="{{ url_for('views.expenses_claims') }}" class="{% if request.endpoint == 'views.expenses_claims' %}active{% endif %}"><i class="fas fa-dollar-sign"></i></a></li>
+                <li><a href="{{ url_for('views.office_space') }}" class="{% if request.endpoint == 'views.office_space' %}active{% endif %}"><i class="fa-solid fa-chair"></i></a></li>
+                <li><a href="{{ url_for('views.leave_board') }}" class="{% if request.endpoint == 'views.leave_board' %}active{% endif %}"><i class="fas fa-clipboard-list"></i> </a></li>
+                <li><a href="{{ url_for('views.chatbot') }}" class="{% if request.endpoint == 'views.chatbot' %}active{% endif %}"><i class="fas fa-comments"></i> </a></li>
+            </ul>
+        </nav>
+        <div class="logout">
+            <a href="{{ url_for('views.logout') }}"><i class="fas fa-sign-out-alt"></i> </a>
+        </div>
+        {% endblock %}
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <header>
+            <div class="kanban__header">
+                <div class="kanban__header-search">
+                    <i class="fas fa-search search-icon"></i>
+                    <input class="input-text" type="text" placeholder="Search for tasks...">
+                </div>
+                <div class="kanban__header-info">
+                    <div class="mail-icon">
+                        <i class="fas fa-envelope"></i>
+                        <div class="mail-icon__notification">No messages</div>
+                    </div>
+                    <div class="notification-icon">
+                        <i class="fas fa-bell"></i>
+                        <div class="notification-icon__alert"></div>
+                        <div class="notification-icon__not">
+                            <div class="notification-author">
+                                <img src="{{ url_for('static', filename='images/cobain.jpg') }}" alt="Notification User">
+                                <span>@Victoria:</span>
+                            </div>
+                            <div class="notification-text">Please teams me now!!</div>
+                        </div>
+                    </div>
+                    <div class="name-user">{{ session.get('user_name', 'Guest') }}</div>
+                    <div class="avatar-user">
+                        <img src="{{ url_for('static', filename='images/' + session.get('user_photo', 'default.jpg')) }}" alt="User Avatar">
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,293 @@
+{% extends 'base.html' %}
+
+{% block title %}Office Space{% endblock %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='office_space.css') }}">
+{% endblock %}
+{% block content %}
+
+<div class="view-controls">
+    <div class="view-buttons">
+        <button id="dayView" class="calendar-button" onclick="changeView('day')">Day</button>
+        <button id="monthView" class="calendar-button" onclick="changeView('month')">Month</button>
+        <button id="gridView" class="calendar-button" onclick="changeView('grid')">Grid</button>
+        <button id="listView" class="calendar-button" onclick="changeView('list')">List</button>
+        <button id="mapView" class="calendar-button active" onclick="changeView('map')">Map</button>
+    </div>
+    <div class="navigation">
+        <button id="prevButton" class="nav-button" onclick="navigate(-1)">&lt;</button>
+        <span id="currentDate"></span>
+        <button id="nextButton" class="nav-button" onclick="navigate(1)">&gt;</button>
+        <select id="levelSelect" class="nav-select">
+            <option value="1">Level 1</option>
+            <option value="2">Level 2</option>
+        </select>
+    </div>
+</div>
+
+<div class="office-map">
+    <img src="{{ url_for('static', filename='images/office_map.png') }}" alt="Office Map" class="office-map-image">
+    <div class="grid-overlay"></div>
+    <!-- Dynamically add desk elements here -->
+</div>
+
+<!-- Add a booking form modal to the HTML -->
+<div id="bookingModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeBookingModal()">&times;</span>
+        <h3 id="modalTitle">Book Desk</h3>
+        <form id="bookingForm">
+            <input type="hidden" id="deskId" name="desk_id">
+            <label for="start_time">Start Time:</label>
+            <input type="time" id="start_time" name="start_time" required>
+            <label for="end_time">End Time:</label>
+            <input type="time" id="end_time" name="end_time" required>
+            <label for="date">Date:</label>
+            <input type="text" id="date" name="date" readonly style="background-color: #e9ecef;">
+            <button type="button" id="bookingButton" onclick="submitBooking()">Book</button>
+            <button type="button" id="editButton" style="display: none;" onclick="submitEdit()">Edit</button>
+            <button type="button" id="cancelButton" style="display: none;" onclick="cancelBooking()">Cancel Booking</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const SGT = new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Singapore', hour12: false }).split(':').slice(0, 2).join(':');
+    let currentDate = new Date();
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const officeMap = document.querySelector('.office-map');
+        renderDesks(currentDate);
+
+        const formattedDate = formatDate(currentDate);
+        console.log(`Setting top right date: ${formattedDate}`);
+        document.getElementById('currentDate').textContent = formattedDate;
+    });
+
+    function renderDesks(date) {
+        console.log(`Fetching desks for date: ${date}`);
+        const officeMap = document.querySelector('.office-map');
+        officeMap.innerHTML = `
+            <img src="{{ url_for('static', filename='images/office_map.png') }}" alt="Office Map" class="office-map-image">
+            <div class="grid-overlay"></div>
+        `;
+
+        fetch(`/get_desks?date=${date.toISOString()}`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Desks data received:', data);
+                data.desks.forEach(desk => {
+                    console.log('Processing desk:', desk);
+                    const deskElement = document.createElement('div');
+                    deskElement.classList.add('desk');
+                    if (desk.booked) {
+                        deskElement.classList.add('booked');
+                        deskElement.innerHTML = `<img src="${desk.photo_url}" class="user-photo" title="${desk.user_name}" alt="${desk.user_name}"><span class="desk-tooltip">Booked till ${desk.bookedTill}</span>`;
+                        console.log(`Desk user_id: ${desk.user_id}, Session user_id: "{{ session['user_id'] }}"`);
+                        if (desk.user_id === "{{ session['user_id'] }}") {
+                            deskElement.classList.add('highlighted'); // Add highlighted class for current user
+                            console.log(`Highlighting desk ${desk.id} for user ${desk.user_name}`);
+                        }
+                    }
+                    deskElement.style.left = `${desk.x / officeMap.clientWidth * 100}%`;
+                    deskElement.style.top = `${desk.y / officeMap.clientHeight * 100}%`;
+                    deskElement.dataset.deskId = desk.id;
+
+                    deskElement.addEventListener('click', function() {
+                        if (desk.booked && desk.user_id === "{{ session['user_id'] }}") {
+                            openEditModal(desk);
+                        } else if (!desk.booked) {
+                            openBookingModal(desk.id);
+                        } else {
+                            alert(`Desk ${desk.id} is already booked till ${desk.bookedTill}`);
+                        }
+                    });
+
+                    officeMap.appendChild(deskElement);
+                });
+            })
+            .catch(error => console.error('Error fetching desk data:', error));
+    }
+
+    function openBookingModal(deskId) {
+        console.log(`Opening booking modal for desk ID: ${deskId}`);
+        const bookingModal = document.getElementById('bookingModal');
+        document.getElementById('deskId').value = deskId;
+
+        // Set the date input field to the current date from the top right side
+        const dateStr = new Date(currentDate.getTime() - currentDate.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+        console.log(`Setting modal date: ${dateStr}`);
+        document.getElementById('date').value = dateStr;
+
+        document.getElementById('modalTitle').textContent = 'Book Desk';
+        document.getElementById('bookingButton').style.display = 'block';
+        document.getElementById('editButton').style.display = 'none';
+        document.getElementById('cancelButton').style.display = 'none';
+
+        bookingModal.style.display = 'block';
+    }
+
+    function openEditModal(desk) {
+        console.log(`Opening edit modal for desk ID: ${desk.id}`);
+        const bookingModal = document.getElementById('bookingModal');
+        document.getElementById('deskId').value = desk.id;
+
+        // Set the date input field to the current date from the top right side
+        const dateStr = new Date(currentDate.getTime() - currentDate.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+        console.log(`Setting modal date: ${dateStr}`);
+        document.getElementById('date').value = dateStr;
+
+        // Set the start and end time fields to the current booking times
+        const startTime = desk.bookedTill.split(' - ')[0];
+        const endTime = desk.bookedTill.split(' - ')[1];
+        document.getElementById('start_time').value = startTime;
+        document.getElementById('end_time').value = endTime;
+
+        document.getElementById('modalTitle').textContent = 'Edit Booking';
+        document.getElementById('bookingButton').style.display = 'none';
+        document.getElementById('editButton').style.display = 'block';
+        document.getElementById('cancelButton').style.display = 'block';
+
+        bookingModal.style.display = 'block';
+    }
+
+    function closeBookingModal() {
+        console.log('Closing booking modal');
+        document.getElementById('bookingModal').style.display = 'none';
+    }
+
+    function submitBooking() {
+        const form = document.getElementById('bookingForm');
+        const formData = new FormData(form);
+        const dateStr = formData.get('date');
+        const startTimeStr = formData.get('start_time');
+        const endTimeStr = formData.get('end_time');
+        
+        // Combine date and time parts, and append the timezone offset
+        const startTime = `${dateStr}T${startTimeStr}:00+08:00`;
+        const endTime = `${dateStr}T${endTimeStr}:00+08:00`;
+        
+        const bookingData = {
+            desk_id: formData.get('desk_id'),
+            user_id: "{{ session['user_id'] }}",
+            start_time: startTime,
+            end_time: endTime
+        };
+
+        console.log('Submitting booking data:', bookingData);
+
+        fetch('/book_desk', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(bookingData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Booking response:', data);
+            if (data.success) {
+                alert('Desk booked successfully!');
+                closeBookingModal();
+                renderDesks(currentDate);
+            } else {
+                alert('Error booking desk: ' + data.message);
+            }
+        })
+        .catch(error => console.error('Error booking desk:', error));
+    }
+
+    function submitEdit() {
+        const form = document.getElementById('bookingForm');
+        const formData = new FormData(form);
+        const dateStr = formData.get('date');
+        const startTimeStr = formData.get('start_time');
+        const endTimeStr = formData.get('end_time');
+        
+        // Combine date and time parts, and append the timezone offset
+        const startTime = `${dateStr}T${startTimeStr}:00+08:00`;
+        const endTime = `${dateStr}T${endTimeStr}:00+08:00`;
+        
+        const bookingData = {
+            desk_id: formData.get('desk_id'),
+            user_id: "{{ session['user_id'] }}",
+            start_time: startTime,
+            end_time: endTime
+        };
+
+        console.log('Submitting edit data:', bookingData);
+
+        fetch('/edit_booking', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(bookingData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Edit response:', data);
+            if (data.success) {
+                alert('Booking updated successfully!');
+                closeBookingModal();
+                renderDesks(currentDate);
+            } else {
+                alert('Error updating booking: ' + data.message);
+            }
+        })
+        .catch(error => console.error('Error updating booking:', error));
+    }
+
+    function cancelBooking() {
+        const deskId = document.getElementById('deskId').value;
+
+        const bookingData = {
+            desk_id: deskId,
+            user_id: "{{ session['user_id'] }}"
+        };
+
+        console.log('Submitting cancel data:', bookingData);
+
+        fetch('/cancel_booking', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(bookingData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Cancel response:', data);
+            if (data.success) {
+                alert('Booking canceled successfully!');
+                closeBookingModal();
+                renderDesks(currentDate);
+            } else {
+                alert('Error canceling booking: ' + data.message);
+            }
+        })
+        .catch(error => console.error('Error canceling booking:', error));
+    }
+
+    function changeView(view) {
+        console.log(`Changing to ${view} view`);
+        // Implement view change logic here
+    }
+
+    function navigate(offset) {
+        currentDate.setDate(currentDate.getDate() + offset);
+        const formattedDate = formatDate(currentDate);
+        console.log(`Setting top right date: ${formattedDate}`);
+        document.getElementById('currentDate').textContent = formattedDate;
+        renderDesks(currentDate);
+    }
+
+    function formatDate(date) {
+        const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+        return date.toLocaleDateString('en-US', options);
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,312 @@
+{% extends 'base.html' %}
+
+{% block title %}Chatbot{% endblock %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='chatbot.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="chatbot-container">
+    <div class="chatbot-header">
+        <h1>Neuro AI</h1>
+        <p>Harnessing the power of AI, our chatbot customizes your content to meet your specific needs and preferences, making personalization effortless. It also features a robust time management and scheduling system to streamline your tasks.</p>
+    </div>
+
+    
+    <div class="prompt-suggestions">
+        <button onclick="sendPrompt('Show me the engagement report for [Engagement Name]')">Request Engagement Report</button>
+        <button onclick="sendPrompt('I would like to submit my timesheet for task [Task Name] for [Hours] hours')">Submit Timesheet</button>
+        <button onclick="sendPrompt('training_resources')">Training Resources</button>
+    </div>
+    <div class="chatbot-body">
+        <div class="chatbot-content">
+            {% for notification in notifications %}
+            <div class="notification">
+                <p>{{ notification.message|safe }}</p>
+                {% if notification.type == 'expense_approval' %}
+                <button onclick="approveNotification('{{ notification._id }}', 'expense_approval', '{{ notification.expense_claim_id }}')">Approve</button>
+                <button onclick="declineNotification('{{ notification._id }}', 'expense_approval', '{{ notification.expense_claim_id }}')">Decline</button>
+                {% elif notification.type == 'plot_approval' %}
+                <button onclick="approvePlotNotification('{{ notification._id }}')">Approve</button>
+                <button onclick="declinePlotNotification('{{ notification._id }}')">Decline</button>
+                {% elif notification.type == 'leave_approval' %}
+                <button onclick="approveNotification('{{ notification._id }}', 'leave_approval', '{{ notification.leave_request_id }}')">Approve</button>
+                <button onclick="declineNotification('{{ notification._id }}', 'leave_approval', '{{ notification.leave_request_id }}')">Decline</button>
+                {% else %}
+                <button onclick="approveNotification('{{ notification._id }}', '{{ notification.type }}')">Approve</button>
+                <button onclick="declineNotification('{{ notification._id }}', '{{ notification.type }}')">Decline</button>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        <div id="loading-animation" style="display: none;">
+            <p>Generating<span id="loading-dots">...</span></p>
+        </div>
+        <div class="chatbot-footer">
+            <input type="text" id="chatbot-input" placeholder="Ask our chatbot for the content form you require" onkeydown="checkEnter(event)">
+            <button onclick="sendChat()"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+
+function approvePlotNotification(notificationId) {
+    fetch('/approve_plot_notification', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ notification_id: notificationId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function declinePlotNotification(notificationId) {
+    fetch('/decline_plot_notification', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ notification_id: notificationId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function approveNotification(notificationId, type, claimId = null) {
+    let url;
+    if (type === 'leave_approval') {
+        url = `/approve_leave_request/${claimId}`;
+    } else if (type === 'expense_approval') {
+        url = `/approve_expense/${claimId}`;
+    } else {
+        url = `/approve_notification/${notificationId}`;
+    }
+
+    fetch(url, { method: 'POST' })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function declineNotification(notificationId, type, claimId = null) {
+    let url;
+    if (type === 'leave_approval') {
+        url = `/decline_leave_request/${claimId}`;
+    } else if (type === 'expense_approval') {
+        url = `/decline_expense/${claimId}`;
+    } else {
+        url = `/decline_notification/${notificationId}`;
+    }
+
+    fetch(url, { method: 'POST' })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+function sendPrompt(prompt) {
+    // Check for placeholders and prompt the user to replace them as needed
+    if (prompt === 'training_resources') {
+        const message = "Please let me know the area in which you need training or SOP guidance. You can ask about topics like FRS 115 or IFRS 16, or inquire about steps in using the Neuro system.";
+        
+        // Use typewriterEffect instead of displayMessage to simulate AI response
+        typewriterEffect(message);
+        return;
+    }
+
+    if (prompt.includes("[Engagement Name]")) {
+        const message = "Please specify the engagement name you would like me to analyze.";
+        typewriterEffect(message); // Changed to typewriterEffect
+        return;
+    } else if (prompt.includes("[Task Name]") || prompt.includes("[Hours]")) {
+        const message = "Please specify the task name and hours to submit your timesheet. Use the format: 'I would like to submit my timesheet for task [Task Name] for [Hours] hours'.";
+        typewriterEffect(message); // Changed to typewriterEffect
+        return;
+    }
+
+    // Show the loading animation
+    showLoadingAnimation();
+
+    fetch('/send_prompt', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ prompt: prompt })
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Hide the loading animation after receiving a response
+        hideLoadingAnimation();
+
+        if (data.success) {
+            typewriterEffect(data.response); // Use typewriterEffect for server response
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}
+
+
+function sendChat() {
+    const input = document.getElementById('chatbot-input').value;
+    const apiKey = "{{ api_key }}"; // Server-side injected API key
+    const userPhotoUrl = "{{ user_photo_url }}"; // Server-side injected user photo URL
+
+    if (input) {
+        // Display user message immediately
+        const chatbotContent = document.querySelector('.chatbot-content');
+
+        const userMessage = document.createElement('div');
+        userMessage.classList.add('user-message');
+        userMessage.innerHTML = `
+            <p>${input}</p>
+            <img src="${userPhotoUrl}" alt="User" class="user-avatar">
+        `;
+        chatbotContent.appendChild(userMessage);
+
+        // Clear input field
+        document.getElementById('chatbot-input').value = '';
+
+        // Scroll to the bottom of the chat
+        chatbotContent.scrollTop = chatbotContent.scrollHeight;
+
+        // Show the loading animation
+        showLoadingAnimation();
+
+        fetch('/send_chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                message: input,
+                apiKey: apiKey
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+
+            // Hide the loading animation after receiving a response
+            hideLoadingAnimation();
+
+            if (data.success) {
+                // Use the typewriter effect for bot's message
+                typewriterEffect(data.response);
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+}
+
+function displayMessage(sender, message) {
+    console.log('Message content:', message);  // Debug log
+    console.log('Rendering message:', message); // Log the message content
+    
+    const chatbotContent = document.querySelector('.chatbot-content');
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add(sender === 'user' ? 'user-message' : 'bot-message');
+    messageDiv.innerHTML = message;  // This ensures HTML content is rendered properly
+    chatbotContent.appendChild(messageDiv);
+    chatbotContent.scrollTop = chatbotContent.scrollHeight;
+
+    // Scroll to the bottom of the chat
+    chatbotContent.scrollTop = chatbotContent.scrollHeight;
+}
+
+function typewriterEffect(message) {
+    const chatbotContent = document.querySelector('.chatbot-content');
+    const botMessage = document.createElement('div');
+    botMessage.classList.add('bot-message');
+    
+    // Check if the message contains HTML tags
+    const containsHTML = /<\/?[a-z][\s\S]*>/i.test(message);
+
+    if (containsHTML) {
+        // Directly set innerHTML if it contains HTML
+        botMessage.innerHTML = `
+            <img src="/static/images/cat-dance.gif" alt="Chatbot" class="chatbot-avatar">
+            <p>${message}</p>
+        `;
+    } else {
+        // Otherwise, apply the typewriter effect for plain text
+        botMessage.innerHTML = `
+            <img src="/static/images/cat-dance.gif" alt="Chatbot" class="chatbot-avatar">
+            <p></p>
+        `;
+        chatbotContent.appendChild(botMessage);
+
+        const botText = botMessage.querySelector('p');
+        let i = 0;
+
+        function typeNextChar() {
+            if (i < message.length) {
+                botText.innerHTML += message.charAt(i);
+                i++;
+                setTimeout(typeNextChar, 15); // Adjust speed as necessary
+            } else {
+                // Scroll to the bottom of the chat after message completes
+                chatbotContent.scrollTop = chatbotContent.scrollHeight;
+            }
+        }
+
+        typeNextChar();
+        return;
+    }
+
+    chatbotContent.appendChild(botMessage);
+    // Scroll to the bottom of the chat after message is added
+    chatbotContent.scrollTop = chatbotContent.scrollHeight;
+}
+
+// Adding an event listener to allow sending messages with the Enter key
+function checkEnter(event) {
+    if (event.key === 'Enter') {
+        sendChat();
+    }
+}
+
+function showLoadingAnimation() {
+    document.getElementById("loading-animation").style.display = "block";
+}
+
+function hideLoadingAnimation() {
+    document.getElementById("loading-animation").style.display = "none";
+}
+</script>
+{% endblock %}

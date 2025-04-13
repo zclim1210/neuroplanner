@@ -1,0 +1,348 @@
+{% extends 'base.html' %}
+
+{% block title %}Leave Record Board{% endblock %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='leave.css') }}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+{% endblock %}
+
+{% block content %}
+<div class="leave-container">
+    <h1>Leave Record Board</h1>
+    <div class="leave-summary">
+        <div class="summary-item">
+            <img src="{{ url_for('static', filename='images/annual-leave-icon.png') }}" alt="Annual Leave">
+            <p>Annual Leave</p>
+            <span>{{ leave_data.annualLeave }}</span>
+        </div>
+        <div class="summary-item">
+            <img src="{{ url_for('static', filename='images/personal-leave-icon.png') }}" alt="Personal Leave">
+            <p>Roll-forward Leave</p>
+            <span>{{ leave_data.rollForward }}</span>
+        </div>
+        <div class="summary-item">
+            <img src="{{ url_for('static', filename='images/medical-leave-icon.png') }}" alt="Long Service Leave">
+            <p>Medical Leave</p>
+            <span>{{ leave_data.medicalLeave }}</span>
+        </div>
+        <div class="summary-item">
+            <img src="{{ url_for('static', filename='images/study-leave-icon.png') }}" alt="Time Off in Lieu(TIL)">
+            <p>Study Leave</p>
+            <span>{{ leave_data.studyLeave }}</span>
+        </div>
+        <div class="summary-item">
+            <img src="{{ url_for('static', filename='images/used-leave-icon.png') }}" alt="Flexi Time">
+            <p>Used Leave</p>
+            <span>{{ leave_data.usedLeave }}</span>
+        </div>
+        <div class="summary-item">
+            <img src="{{ url_for('static', filename='images/balance-icon.png') }}" alt="Other">
+            <p>Balance</p>
+            <span>{{ leave_data.balance }}</span>
+        </div>
+    </div>
+
+    <!-- Leave Details Section -->
+<div class="leave-details">
+    <div class="details-item holidays">
+        <h3>Upcoming Holidays</h3>
+        <ul>
+            <li>New Year's Day - January 1</li>
+            <li>Independence Day - July 4</li>
+            <li>Thanksgiving - November 25</li>
+            <li>Christmas Day - December 25</li>
+        </ul>
+    </div>
+    <div class="details-item pay-schedule">
+        <h3>Pay Schedule</h3>
+        <ul>
+            <li>January - 31st</li>
+            <li>February - 28th</li>
+            <li>March - 31st</li>
+            <li>April - 30th</li>
+            <li>May - 31st</li>
+            <li>June - 30th</li>
+            <li>July - 31st</li>
+            <li>August - 31st</li>
+            <li>September - 30th</li>
+            <li>October - 31st</li>
+            <li>November - 30th</li>
+            <li>December - 31st</li>
+        </ul>
+    </div>
+    <div class="details-item employee">
+        <h3>Employee</h3>
+        <div class="pie-chart">
+            <canvas id="employeeChart"></canvas>
+        </div>
+        <div class="chart-legend">
+            <div><span class="legend-color office"></span> Full-time</div>
+            <div><span class="legend-color home"></span> Part-time</div>
+            <div><span class="legend-color contract"></span> Contract</div>
+        </div>
+    </div>
+    <div class="details-item day-status">
+        <h3>How's your day?</h3>
+        <div class="status-options">
+            <button class="status-option" onclick="setStatus('Great')"><i class="fas fa-smile"></i><span>Great</span></button>
+            <button class="status-option" onclick="setStatus('Good')"><i class="fas fa-smile-beam"></i><span>Good</span></button>
+            <button class="status-option" onclick="setStatus('Okay')"><i class="fas fa-meh"></i><span>Okay</span></button>
+            <button class="status-option" onclick="setStatus('Bad')"><i class="fas fa-frown"></i><span>Bad</span></button>
+            <button class="status-option" onclick="setStatus('Terrible')"><i class="fas fa-angry"></i><span>Terrible</span></button>
+        </div>
+    </div>
+</div>
+
+    <!-- Leave Applications Section -->
+    <div class="leave-applications">
+        <h3>Current Leave Application</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Leave Type</th>
+                    <th>From Date</th>
+                    <th>To Date</th>
+                    <th>Approved Status</th>
+                    <th>Counts</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for leave in leave_applications %}
+                <tr>
+                    <td>{{ leave.leave_type }}</td>
+                    <td>{{ leave.start_date.strftime('%a %d %b %Y') }}</td>
+                    <td>{{ leave.end_date.strftime('%a %d %b %Y') }}</td>
+                    <td class="{{ leave.status | lower }}">{{ leave.status }}</td>
+                    <td>{{ leave.counts }} Days</td>
+                    <td>
+                        {% if leave.status == 'Pending' %}
+                        <button onclick="modifyLeave('{{ leave._id }}')"><i class="fas fa-edit"></i></button>
+                        {% endif %}
+                        <button onclick="cancelLeave('{{ leave._id }}')"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Button to Open Modal -->
+    <button id="requestLeaveBtn">Request Leave</button>
+
+    <div id="leaveRequestModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h3>Leave Request</h3>
+            <form id="leaveRequestForm" method="post" enctype="multipart/form-data">
+                <input type="hidden" id="modify_leave_id" name="modify_leave_id" value="">
+                <div class="form-group">
+                    <label for="leave_type">Leave Type</label>
+                    <select id="leave_type" name="leave_type">
+                        <option value="annualLeave">Annual Leave</option>
+                        <option value="rollForward">Roll-forward Leave</option>
+                        <option value="medicalLeave">Medical Leave</option>
+                        <option value="studyLeave">Study Leave</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="start_date">Start Date</label>
+                    <input type="text" id="start_date" name="start_date">
+                </div>
+                <div class="form-group">
+                    <label for="end_date">End Date</label>
+                    <input type="text" id="end_date" name="end_date">
+                </div>
+                <div class="form-group">
+                    <label for="about">About</label>
+                    <textarea id="about" name="about"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="attachments">Attachments</label>
+                    <input type="file" id="attachments" name="attachments" multiple>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="save-draft" onclick="saveDraft()">Save as Draft</button>
+                    <button type="submit" class="submit">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/moment/min/moment.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    let isSubmitting = false; // Prevent multiple form submissions
+
+    $(document).ready(function() {
+        $('#start_date, #end_date').daterangepicker({
+            singleDatePicker: true,
+            locale: {
+                format: 'YYYY-MM-DD'
+            }
+        });
+
+        $('#requestLeaveBtn').on('click', function() {
+            $('#leaveRequestModal').css('display', 'block');
+            document.getElementById('modify_leave_id').value = ""; // Clear modify leave ID for new requests
+        });
+
+        $('#leaveRequestForm').on('submit', function(event) {
+            event.preventDefault();
+            if (isSubmitting) return; // Prevent multiple submissions
+            isSubmitting = true;
+            const modifyLeaveId = document.getElementById('modify_leave_id').value;
+            if (modifyLeaveId) {
+                submitModifyLeaveRequest(modifyLeaveId);
+            } else {
+                submitLeaveRequest();
+            }
+        });
+    });
+
+    function closeModal() {
+        $('#leaveRequestModal').css('display', 'none');
+        isSubmitting = false; // Reset submission flag
+    }
+
+    function saveDraft() {
+        alert('Draft saved!');
+    }
+
+    function submitLeaveRequest() {
+        console.log("Submitting new leave request");
+        const formData = new FormData($('#leaveRequestForm')[0]);
+        fetch('/submit_leave_request', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Leave request submitted successfully!');
+                closeModal();
+                location.reload();
+            } else {
+                alert('Failed to submit leave request');
+                closeModal();
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            isSubmitting = false; // Reset submission flag on error
+        });
+    }
+
+    function cancelLeave(leaveId) {
+        console.log(`Cancelling leave request with ID: ${leaveId}`);
+        fetch(`/cancel_leave/${leaveId}`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Leave cancelled successfully!');
+                location.reload();
+            } else {
+                alert(data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    function modifyLeave(leaveId) {
+        console.log(`Fetching details for leave request with ID: ${leaveId}`);
+        fetch(`/get_leave_details/${leaveId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success === false) {
+                throw new Error(data.message);
+            }
+            console.log('Leave Details:', data);
+            document.getElementById('leaveRequestModal').style.display = 'block';
+            document.getElementById('leave_type').value = data.leave_type;
+            document.getElementById('start_date').value = data.start_date.split('T')[0]; // Extract the date part
+            document.getElementById('end_date').value = data.end_date.split('T')[0]; // Extract the date part
+            document.getElementById('about').value = data.about;
+            document.getElementById('modify_leave_id').value = leaveId; // Set modify leave ID
+
+            // Set the form action to modify
+            document.getElementById('leaveRequestForm').onsubmit = function(event) {
+                event.preventDefault();
+                if (isSubmitting) return; // Prevent multiple submissions
+                isSubmitting = true;
+                submitModifyLeaveRequest(leaveId);
+            };
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert(error.message);
+        });
+    }
+
+    function submitModifyLeaveRequest(leaveId) {
+        console.log(`Submitting modification for leave request with ID: ${leaveId}`);
+        const formData = new FormData($('#leaveRequestForm')[0]);
+        fetch(`/modify_leave/${leaveId}`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Leave request modified successfully!');
+                closeModal();
+                location.reload();
+            } else {
+                alert('Failed to modify leave request');
+                closeModal();
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            isSubmitting = false; // Reset submission flag on error
+        });
+    }
+
+    function setStatus(status) {
+    alert(`You set your status to: ${status}`);
+}
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    var ctx = document.getElementById('employeeChart').getContext('2d');
+    var employeeChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: ['Full-time', 'Part-time', 'Contract'],
+            datasets: [{
+                data: [50, 30, 20], // Example data
+                backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56']
+            }]
+        },
+        options: {
+            responsive: true,
+            legend: {
+                position: 'right'
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,589 @@
+/* Container for the entire page */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header Section */
+.expense-summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.expense-summary-header h2 {
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.date-picker input {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 14px;
+}
+
+/* Summary Cards */
+.summary-cards {
+    display: flex;
+    justify-content: space-between;
+    margin: 20px 0;
+}
+
+.card {
+    display: flex;
+    align-items: center;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding: 15px;
+    width: 23%;
+}
+
+.card i {
+    font-size: 36px;
+    margin-right: 15px;
+    color: #ffc107;
+}
+
+.card h3 {
+    font-size: 16px;
+    margin: 0;
+    font-weight: 600;
+}
+
+.card p {
+    font-size: 20px;
+    margin: 5px 0 0;
+    font-weight: 500;
+}
+
+/* Expense Trends */
+.expense-trends {
+    margin-top: 40px;
+}
+
+.expense-trends h3 {
+    margin-bottom: 20px;
+}
+
+.chart-container {
+    max-width: 100%;
+    width: 100%; /* Ensure the chart is full width */
+    height: 500px; /* Set a fixed height for the chart */
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Filters */
+.filter-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #f9f9f9;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 12px;
+    min-width: 160px;
+    z-index: 1;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.filter-dropdown:hover .dropdown-content {
+    display: block;
+}
+
+.dropdown-content label {
+    display: block;
+    font-size: 14px;
+    padding: 8px 0;
+    cursor: pointer;
+}
+
+.dropdown-content label:hover {
+    background-color: #007aff;
+    color: white;
+    border-radius: 4px;
+}
+
+.filters-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    padding-bottom: 20px; /* Add spacing below the filters */
+}
+
+.filters {
+    display: flex;
+    gap: 10px;
+}
+
+.clear-filters-button {
+    background-color: #ff3b30;
+    border: none;
+    border-radius: 12px;
+    padding: 8px 15px;
+    font-size: 14px;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.clear-filters-button:hover {
+    background-color: #cc2a25;
+}
+/* Table Buttons */
+.expenses-table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.table-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.table-button {
+    background-color: #f5f5f5;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 16px;
+    cursor: pointer;
+    color: #333;
+}
+
+.table-button:hover {
+    background-color: #e0e0e0;
+}
+
+.table-button i {
+    margin: 0;
+}
+
+/* Table Styles */
+.expenses-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.expenses-table th, .expenses-table td {
+    border-top: 1px solid #ddd; /* Remove left, right, and bottom borders */
+    border-bottom: 1px solid #ddd; /* Add only row lines */
+    padding: 12px 15px;
+    text-align: left;
+}
+
+.expenses-table th {
+    background-color: #f5f5f5;
+    font-weight: 600;
+}
+
+.expenses-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.expenses-table .status-badge {
+    padding: 5px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-badge.paid {
+    background-color: #28a745;
+    color: #fff;
+}
+
+.status-badge.approved {
+    background-color: #ffc107;
+    color: #fff;
+}
+
+.status-badge.pending {
+    background-color: #17a2b8;
+    color: #fff;
+}
+
+.status-badge.declined {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+/* Switch (Recurring) */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 34px;
+    height: 20px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #28a745;
+}
+
+input:checked + .slider:before {
+    transform: translateX(14px);
+}
+
+#expenseChart {
+    max-width: 100%;
+    height: 100%; /* Adjusted to fit the fixed container */
+}
+
+/* General modal styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+    padding-top: 60px;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: auto;
+    padding: 20px;
+    border-radius: 20px;
+    width: 600px; /* Increased width to better fit content */
+    max-width: 90%; /* Optional: Ensures it does not exceed viewport width */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    text-align: center;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Amount Display */
+.amount-display {
+    display: flex;
+    justify-content: center;
+    align-items: baseline;
+    font-size: 48px;
+    font-weight: bold;
+    margin: 20px 0;
+}
+
+.amount-display input[type="number"] {
+    font-size: 48px;
+    font-weight: bold;
+    width: 180px;
+    text-align: right;
+    border: none;
+    border-bottom: 2px solid #000;
+    outline: none;
+}
+
+.amount-display .currency {
+    font-size: 24px;
+    margin-left: 10px;
+    color: #555;
+}
+
+/* Form Styles */
+.form-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 5px;
+}
+
+.form-group input[type="text"],
+.form-group input[type="date"],
+.form-group input[type="number"],
+.form-group select,
+.form-group input[type="file"] {
+    width: 100%;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    font-size: 16px;
+    background-color: #f9f9f9;
+    box-sizing: border-box; /* Ensure padding is included in width */
+}
+
+.form-group input[type="file"] {
+    padding: 5px;
+}
+
+.btn-submit {
+    background-color: #000;
+    color: white;
+    padding: 15px;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 18px;
+    width: 100%;
+    transition: background-color 0.3s ease;
+    margin-top: 20px;
+}
+
+.btn-submit:hover {
+    background-color: #333;
+}
+
+
+.macos-button {
+    background-color: #007aff;
+    border: none;
+    color: white;
+    padding: 10px 15px;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+.macos-button.danger {
+    background-color: #ff3b30;
+}
+
+.macos-button:hover {
+    background-color: #005bb5;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.modal-content.macos-modal {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 400px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+
+/* Notification styles */
+.notification {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: white;
+    padding: 15px 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    animation: slideDown 1s ease, slideUp 1s ease 5s;
+}
+
+/* Slide down animation */
+@keyframes slideDown {
+    0% {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Slide up animation */
+@keyframes slideUp {
+    0% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+}
+
+/* Container for the status indicators */
+.status-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 10px;
+    background-color: #f0f0f5;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Common styles for both status items */
+.status-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    width: 100px;
+}
+
+/* The circular icon */
+.status-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid #d3d3d3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+}
+
+/* Processing (red spinner) */
+.processing .status-icon {
+    border-color: #ff3b30; /* macOS red */
+    animation: spin 1s linear infinite; /* Spin animation */
+}
+
+.processing .status-icon:before {
+    content: '';
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    border-top-color: #ff3b30; /* macOS red */
+    border-left-color: #ff3b30;
+    animation: spin 1s linear infinite;
+}
+
+.processing .status-text {
+    color: #ff3b30;
+}
+
+/* Done (blue checkmark) */
+.done .status-icon {
+    border-color: #007aff; /* macOS blue */
+}
+
+.done .status-icon:before {
+    content: '✓'; /* Checkmark symbol */
+    font-size: 20px;
+    color: #007aff; /* macOS blue */
+}
+
+.done .status-text {
+    color: #007aff;
+}
+
+/* Spin animation for processing */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Status text */
+.status-text {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+}
+
+/* Loading Spinner and Success Checkmark */
+.loading-icon {
+    margin-left: 10px;
+    color: #007aff; /* macOS blue */
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+}
+
+.success-icon {
+    margin-left: 10px;
+    color: #007aff; /* macOS blue */
+    display: inline-block;
+    font-size: 20px;
+}
+
+.btn-submit.loading {
+    background-color: #e0e0e0;
+    cursor: wait;
+}
+
+.btn-submit.success {
+    background-color: #007aff;
+    color: white;
+    cursor: default;
+}
+
+.btn-submit {
+    position: relative;
+    padding-right: 40px; /* Add some padding for the icons */
+    padding-left: 40px;
+    border-radius: 12px;
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}

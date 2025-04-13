@@ -1,0 +1,681 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    height: 100vh;
+    background-color: #f5f6fa;
+    overflow-y: scroll;
+}
+
+.sidebar {
+    width: 80px;
+    background-color: #ffffff;
+    border-right: 1px solid #e6e6e6;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 0;
+}
+
+.sidebar .logo img {
+    width: 40px;
+    height: auto;
+    margin-bottom: 20px;
+}
+
+.sidebar nav ul {
+    list-style: none;
+    padding: 0;
+    width: 100%;
+    margin: 0;
+}
+
+.sidebar nav ul li {
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+.sidebar nav ul li a {
+    color: #2c3e50;
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 0;
+    width: 100%;
+    text-align: center;
+}
+
+.sidebar nav ul li a.active {
+    background-color: #ecf0f1;
+    border-radius: 8px;
+}
+
+.sidebar nav ul li a i {
+    font-size: 20px;
+}
+
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    background-color: #ffffff;
+    padding: 20px;
+    border-bottom: 1px solid #e6e6e6;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 24px;
+    color: #333;
+}
+
+main {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.dashboard {
+    display: flex;
+    flex-direction: column;
+}
+
+.current-projects {
+    margin-bottom: 40px;
+    width: 100%; /* Align with the Daily Tasks below */
+    max-width: 1500px; /* Limit the max width to align with the content below */
+    position: relative; /* To position the navigation buttons inside */
+}
+
+
+.current-projects h2, .tasks-and-stats h2 {
+    font-size: 2rem;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.engagement-wrapper {
+    overflow: hidden;
+    width: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.engagements {
+    display: flex;
+    transition: transform 0.3s ease-in-out;
+    position: relative;
+
+}
+
+.card {
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    width: 300px; /* Set a fixed width */
+    margin: 0 10px; /* Controls the gap between cards */
+    box-sizing: border-box;
+    flex: 0 0 auto; /* Prevent flex-grow and flex-shrink */
+    position: relative;
+    overflow: hidden;
+}
+
+.engagement-nav {
+    background-color: rgba(0, 0, 0, 0.5);
+    border: none;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 10px;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+}
+
+#prev-engagement {
+    left: -30px;
+}
+
+#next-engagement {
+    right: -30px;
+}
+
+.engagement-nav:hover {
+    background-color: rgba(0, 0, 0, 0.7);
+}
+.card h3, .project-card p, .progress-container text {
+    color: white;
+}
+
+.card-blue {
+    background-color: #0c1832;
+}
+
+.card-pink {
+    background-color: #064f28;
+}
+
+.card-green {
+    background-color: #000000;
+}
+
+.project-card h3 {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+    color: white;
+}
+
+.team {
+    display: flex;
+    margin-bottom: 10px;
+}
+
+.member, .manager {
+    margin-right: 5px;
+    position: relative;
+}
+
+.member img, .manager img {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 5px;
+    white-space: nowrap;
+    display: none;
+}
+
+.member:hover .tooltip,
+.manager:hover .tooltip {
+    display: block;
+}
+
+.progress-container {
+    width: 100px;
+    height: 100px;
+    margin: 10px 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.project-card p {
+    font-size: 1rem;
+    margin: 5px 0;
+    color: white;
+}
+
+.project-card i {
+    margin-right: 5px;
+}
+
+.current-tasks, .task-stats {
+    width: 48%;
+    display: inline-block;
+    vertical-align: top;
+}
+
+.task-card {
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 16px;
+    padding: 10px;
+    margin-bottom: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.task-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.task-item:last-child {
+    border-bottom: none;
+}
+
+.task-item h3 {
+    font-size: 1.25rem;
+    margin-bottom: 5px;
+}
+
+.task-item p {
+    font-size: 1rem;
+    margin: 5px 0;
+}
+
+.task-item .status-icon {
+    font-size: 1.5rem;
+    color: #4caf50;
+    cursor: pointer;
+}
+
+.add-manually {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.add-manually button {
+    background-color: #1e90ff;
+    color: white;
+    border: none;
+    border-radius: 16px;
+    padding: 10px 20px;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.add-manually button:hover {
+    background-color: #1c86ee;
+}
+
+.engagement-btn {
+    background-color: #e0e0e0;
+    color: #333;
+    border: none;
+    border-radius: 16px;
+    padding: 5px 10px;
+    font-size: 0.875rem;
+    cursor: default;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4);
+    padding-top: 60px;
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 50%;
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.modal form {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.modal form .form-group {
+    margin-bottom: 15px;
+    width: 100%;
+}
+
+.modal form label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.modal form input[type="text"],
+.modal form input[type="number"],
+.modal form input[type="date"],
+.modal form select,
+.modal form textarea {
+    width: calc(100% - 20px);
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+}
+
+.modal form .time-inputs {
+    display: flex;
+    align-items: center;
+}
+
+.modal form .time-inputs input {
+    width: 60px;
+    margin-right: 5px;
+}
+
+.modal form .time-inputs span {
+    margin-right: 5px;
+}
+
+.confirm-button {
+    display: inline-block;
+    padding: 10px;
+    background-color: #e0e0e0;
+    border-radius: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.confirm-button input[type="checkbox"] {
+    display: none;
+}
+
+.confirm-button span {
+    display: inline-block;
+    font-size: 1.5rem;
+    color: #333;
+}
+
+.confirm-button.checked span {
+    color: #4caf50;
+}
+
+.modal form button {
+    background-color: #1e90ff;
+    color: white;
+    border: none;
+    border-radius: 16px;
+    padding: 10px 20px;
+    font-size: 1rem;
+    cursor: pointer;
+    align-self: center;
+}
+
+.modal form button:hover {
+    background-color: #1c86ee;
+}
+
+body::-webkit-scrollbar,
+.task-card::-webkit-scrollbar {
+    width: 12px;
+}
+
+body::-webkit-scrollbar-track,
+.task-card::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+body::-webkit-scrollbar-thumb,
+.task-card::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 6px;
+}
+
+body::-webkit-scrollbar-thumb:hover,
+.task-card::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+.expandable-section {
+    position: fixed;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: #fff;
+    border-left: 1px solid #ddd;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.toggle-button {
+    background-color: #f1f1f1;
+    padding: 10px;
+    cursor: pointer;
+    text-align: center;
+    border: 1px solid #ddd;
+    border-left: none;
+    border-radius: 4px 0 0 4px;
+}
+
+.toggle-icon {
+    font-size: 18px;
+}
+
+.expandable-content {
+    padding: 20px;
+    display: none;
+}
+
+.search-bar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.search-bar input {
+    width: 100%;
+    padding: 10px 15px;
+    border-radius: 24px;
+    border: 1px solid #ddd;
+    background-color: #f5f5f5;
+    font-size: 1rem;
+    outline: none;
+}
+
+.search-bar input::placeholder {
+    color: #aaa;
+}
+
+.search-bar i {
+    position: absolute;
+    right: 15px;
+    color: #aaa;
+    pointer-events: none;
+}
+
+.add-member-button {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.add-member-button button {
+    margin-left: 10px;
+    width: auto;
+    background-color: #28a745;
+    color: white;
+    cursor: pointer;
+}
+
+.add-member-button button:hover {
+    background-color: #218838;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+button, .modern-button {
+    background-color: #007bff;
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+button:hover, .modern-button:hover {
+    background-color: #0056b3;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+button i, .modern-button i {
+    margin-right: 5px;
+}
+
+.recommendations-container {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.rank-label {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #444;
+    margin-bottom: 4px;
+    text-align: center;
+    background-color: #f3f3f3;
+    padding: 2px 5px;
+    border-radius: 3px;
+}
+
+.employee-card {
+    text-align: center;
+    width: 80px;
+    margin: 10px;
+}
+
+.employee-card img {
+    width: 80px;  /* Set a fixed width */
+    height: 80px; /* Set a fixed height */
+    object-fit: cover; /* Crop the image to fit */
+    border-radius: 50%; /* Make it a circle */
+}
+
+/* Notification visible state */
+.notification-container.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Notification content */
+.notification-content {
+    display: flex;
+    align-items: center;
+}
+
+.notification-icon {
+    font-size: 20px;
+    margin-right: 10px;
+    color: #00c853;  /* Success color */
+}
+
+.notification-text {
+    font-size: 14px;
+    flex: 1;
+}
+
+.close-notification {
+    font-size: 16px;
+    color: #fff;
+    cursor: pointer;
+    padding-left: 10px;
+    transition: color 0.3s;
+}
+
+.close-notification:hover {
+    color: #ff5252;
+}
+
+/* Additional styles for the notification */
+.notification-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #333;
+    color: white;
+    padding: 15px;
+    border-radius: 5px;
+    opacity: 0;
+    transform: translateY(50px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    z-index: 1000;
+}
+
+
+.utilization-section {
+    display: flex;
+    gap: 20px;
+}
+.utilization-view {
+    width: 50%;
+}
+
+.rate-display {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 10px;
+    background-color: #f1f1f1; /* Subtle light gray background */
+    border-radius: 8px;
+    border: 1px solid #e0e0e0; /* Soft border to match macOS style */
+    font-size: 14px;
+    font-weight: 500;
+    color: #333; /* Dark gray text color */
+    box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1); /* Soft shadow for depth */
+    gap: 5px; /* Space between elements */
+    margin: 5px 0;
+}
+
+/* Styling for the separators (e.g., the `|` between rates) */
+.rate-display span:not(:last-child)::after {
+    content: "|";
+    margin: 0 8px;
+    color: #999; /* Light gray for the separator to make it subtle */
+}
+
+.advice-display {
+    margin-top: 10px;
+    font-size: 1em;
+    color: #333;
+    padding: 5px;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}

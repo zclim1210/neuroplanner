@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Board</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='reset.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='task.css') }}">
+</head>
+<body>
+
+  <!-- Main Kanban Wrapper -->
+  <div class="kanban-wrapper">
+    <div class="kanban">
+      <!-- Logo Section -->
+      <a href="/">
+        <section class="kanban__logo">
+          <span>Neuro Planner</span>
+        </section>
+      </a>
+
+      <!-- Sidebar Section -->
+      <section class="kanban__sidebar">
+        <div class="kanban__sidebar-menu">
+          <!-- Manage Section -->
+          <NavLink to="/manage" activeClassName="active-area">
+            <div class="manage-area">
+              <i class="material-icons">people</i>
+              <span>Manage</span>
+            </div>
+          </NavLink>
+
+          <!-- Boards Section -->
+          <a href="/" class="boards-area active-area">
+            <div class="boards-area">
+                <i class="material-icons">dns</i>
+                <span>Boards</span>
+            </div>
+        </a>
+
+          <!-- Schedule Section -->
+          <NavLink to="/schedule" activeClassName="active-area">
+            <div class="schedule-area">
+              <i class="material-icons">event_note</i>
+              <span>Schedule</span>
+            </div>
+          </NavLink>
+
+          <!-- Reports Section -->
+          <NavLink to="/reports" activeClassName="active-area">
+            <div class="reports-area">
+              <i class="material-icons">assessment</i>
+              <span>Reports</span>
+            </div>
+          </NavLink>
+        </div>
+
+        <!-- Settings Section -->
+        <NavLink to="/settings" activeClassName="active-area">
+          <div class="kanban__sidebar-settings">
+            <i class="material-icons">settings</i>
+            <span>Settings</span>
+          </div>
+        </NavLink>
+      </section>
+
+      <!-- Nav Section -->
+      <section class="kanban__nav">
+        <div class="kanban__nav-wrapper">
+          <!-- Title Section (Studio Board) -->
+          <div class="kanban__nav-name">
+            <div class="kanban-name">Engagement Task</div>
+            <div class="kanban-arrow" onclick="toggleBoard()">
+              <i class="material-icons">expand_more</i>
+            </div>
+          </div>
+
+          <!-- Team Section with Invite -->
+          <div class="kanban__nav-avs">
+            {% for member in team_members %}
+            <div class="kanban__nav-avs-img">
+                <img src="{{ url_for('static', filename='images/' + member.photo) }}" alt="{{ member.name }}" />
+            </div>
+            {% else %}
+              <p>No team members assigned to this engagement.</p>
+            {% endfor %}
+
+            <!-- Invite section -->
+            <div class="kanban__nav-avs-add">
+              <div class="kanban__nav-avs-invite">
+                <form onsubmit="handleInviteSubmit(event)">
+                  <input type="email" placeholder="invite email" class="invite-email" />
+                  <button type="submit" class="invite-btn">Send</button>
+                </form>
+              </div>
+              <i class="material-icons">add</i>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Header Section -->
+      <section class="kanban__header">
+        <div class="kanban__header-search">
+          <div class="search-icon">
+            <i class="material-icons">search</i>
+          </div>
+          <input class="input-text" type="text" placeholder="Search for tasks..." />
+        </div>
+        <div class="kanban__header-info">
+          <div class="mail-icon">
+            <i class="material-icons">mail_outline</i>
+            <div class="mail-icon__notification">No messages</div>
+          </div>
+          <div class="notification-icon">
+            <i class="material-icons">notifications_none</i>
+            <div class="notification-icon__alert"></div>
+            <div class="notification-icon__not">
+              <div class="notification-author">
+                <img src="/static/images/cobain.jpg" alt="Cobain" />
+                <span>@Victoria:</span>
+              </div>
+              <div class="notification-text">Please teams me now!!</div>
+            </div>
+          </div>
+          <div class="name-user">{{ user_name }}</div>
+          <div class="avatar-user">
+            <img src="{{ url_for('static', filename='images/' + user_photo) }}" alt="{{ user_name }}" />
+          </div>
+        </div>
+      </section>
+
+      <!-- Main Content Section -->
+      <section class="kanban__main">
+        <div class="kanban__main-wrapper">
+            <!-- To Start Section -->
+            <div class="card-wrapper backlog-color">
+                <div class="card-wrapper__header">
+                    <div class="backlog-name">To Start</div>
+                    <div class="backlog-dots" onclick="toggleCardsVisibility(this)">
+                        <i class="material-icons">expand_more</i>
+                    </div>
+                </div>
+                <div class="cards" id="toStartCards" ondragover="handleDragOver(event)" ondrop="handleDrop(event, 'To Start')">
+                    <script id="engagement-id" type="application/json">{{ engagement_id | tojson }}</script>
+                    {% for task in tasks if task.status == 'To Start' %}
+                    <div class="card {{ task.priority }}-color" draggable="true" ondragstart="handleDragStart('{{ task._id }}')">
+                        <div class="card__header">
+                            <div class="card__header-priority">Priority level: {{ task.priority }}</div>
+                            <div class="card__header-clear" onclick="deleteTask('{{ task._id }}')">
+                                <i class="material-icons">clear</i>
+                            </div>
+                        </div>
+                        <div class="card__text">{{ task.description }}</div>
+    
+                        <div class="card__meta">
+                            <div class="due-date">
+                                <div class="meta-icon">
+                                    <i class="material-icons">event</i>
+                                </div>
+                                <div class="meta-text">Due Date: {{ task.formatted_dueDate }}</div>
+                            </div>
+                            <div class="estimated-time">
+                                <div class="meta-icon">
+                                    <i class="material-icons">access_time</i>
+                                </div>
+                                <div class="meta-text">Estimated Time: {{ task.timeEstimate }} hours</div>
+                            </div>
+                        </div>
+    
+                        <div class="card__menu">
+                            <div class="card__menu-left">
+                                <div class="comments-wrapper">
+                                    <div class="comments-ico"><i class="material-icons">comment</i></div>
+                                    <div class="comments-num">{{ task.comments }}</div>
+                                </div>
+                                <div class="attach-wrapper">
+                                    <div class="attach-ico"><i class="material-icons">attach_file</i></div>
+                                    <div class="attach-num">{{ task.attach }}</div>
+                                </div>
+                            </div>
+                            <div class="card__menu-right">
+                                <div class="img-avatar">
+                                    <img src="{{ url_for('static', filename='images/' + task.avatar) }}" alt="{{ task.user }}" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <!-- Add task button and form -->
+                <div class="card-wrapper__footer" onclick="toggleTaskForm()">
+                    <div class="add-task">Add Task</div>
+                    <div class="add-task-ico">
+                        <i class="material-icons">add_circle_outline</i>
+                    </div>
+                </div>
+                
+                <!-- Task Form -->
+                <div id="addTaskForm" class="add-task-form" style="display: none;">
+                    <form onsubmit="submitAddTask(); return false;">
+                        <input type="hidden" id="engagementId" value="{{ engagement_id }}"> <!-- Preset engagement ID -->
+                        <input type="hidden" id="taskStatus" value=""> <!-- Status will be preset based on section -->
+                
+                        <div class="form-group">
+                            <label for="taskDescription">Task Description:</label>
+                            <input type="text" id="taskDescription" required>
+                        </div>
+                
+                        <div class="form-group">
+                            <label for="assignedTo">Assign To:</label>
+                            <select id="assignedTo" name="assignedTo" required>
+                                <!-- Populate via JS or server-side with team members -->
+                            </select>
+                        </div>
+                
+                        <div class="form-group">
+                            <label for="dueDate">Due Date:</label>
+                            <input type="date" id="dueDate" required>
+                        </div>
+                
+                        <div class="form-group">
+                            <label for="timeEstimate">Estimated Time (hours):</label>
+                            <input type="number" id="timeEstimate" required>
+                        </div>
+                
+                        <div class="form-group">
+                            <label>Priority Level:</label>
+                            <div class="priority-level">
+                                <input type="radio" name="priority" value="Low" id="priorityLow" required>
+                                <label for="priorityLow">Low</label>
+                                <input type="radio" name="priority" value="Medium" id="priorityMedium" required>
+                                <label for="priorityMedium">Medium</label>
+                                <input type="radio" name="priority" value="High" id="priorityHigh" required>
+                                <label for="priorityHigh">High</label>
+                            </div>
+                        </div>
+                
+                        <div class="form-group">
+                            <label for="difficulty">Difficulty Level:</label>
+                            <select id="difficulty" required>
+                                <option value="1">1 - Easy</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5 - Difficult</option>
+                            </select>
+                        </div>
+                
+                        <button type="submit">Add Task</button>
+                    </form>
+                </div>
+                <div id="toStartForm" class="add-card-form" style="display: none;"></div>
+            </div>
+        
+            <!-- In Progress Section -->
+            <div class="card-wrapper in-progress-color">
+                <div class="card-wrapper__header">
+                    <div class="backlog-name">In Progress</div>
+                    <div class="backlog-dots" onclick="toggleCardsVisibility(this)">
+                        <i class="material-icons">expand_more</i>
+                    </div>
+                </div>
+                <div class="cards" id="inProgressCards" ondragover="handleDragOver(event)" ondrop="handleDrop(event, 'In Progress')">
+                    {% for task in tasks if task.status == 'In Progress' %}
+                    <div class="card {{ task.priority }}-color" draggable="true" ondragstart="handleDragStart('{{ task._id }}')"
+                    onclick="openTimesheetModal('{{ task._id }}', '{{ task.description }}', '{{ task.engagement_name }}')">
+                        <div class="card__header">
+                            <div class="card__header-priority">Priority level: {{ task.priority }}</div>
+                            <div class="card__header-clear" onclick="deleteTask('{{ task._id }}')">
+                                <i class="material-icons">clear</i>
+                            </div>
+                        </div>
+                        <div class="card__text">{{ task.description }}</div>
+
+                        <div class="card__meta">
+                            <div class="due-date">
+                                <div class="meta-icon">
+                                    <i class="material-icons">event</i>
+                                </div>
+                                <div class="meta-text">Due Date: {{ task.formatted_dueDate }}</div>
+                            </div>
+                            <div class="estimated-time">
+                                <div class="meta-icon">
+                                    <i class="material-icons">access_time</i>
+                                </div>
+                                <div class="meta-text">Estimated Time: {{ task.timeEstimate }} hours</div>
+                            </div>
+                        </div>
+
+                        <div class="card__menu">
+                            <div class="card__menu-left">
+                                <div class="comments-wrapper">
+                                    <div class="comments-ico"><i class="material-icons">comment</i></div>
+                                    <div class="comments-num">{{ task.comments }}</div>
+                                </div>
+                                <div class="attach-wrapper">
+                                    <div class="attach-ico"><i class="material-icons">attach_file</i></div>
+                                    <div class="attach-num">{{ task.attach }}</div>
+                                </div>
+                            </div>
+                            <div class="card__menu-right">
+                                <div class="img-avatar">
+                                    <img src="{{ url_for('static', filename='images/' + task.avatar) }}" alt="{{ task.user }}" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            
+            </div>
+
+            <div id="timesheetModal" class="modal">
+                <div class="modal-content">
+                    <span class="close" onclick="closeTimesheetModal()">&times;</span>
+                    <h2>Submit Timesheet</h2>
+                    <form id="timesheetForm" onsubmit="submitTimesheet(); return false;">
+                        <div class="form-group">
+                            <label for="engagementName">Engagement Name:</label>
+                            <input type="text" id="engagementName" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="taskName">Task Name:</label>
+                            <input type="text" id="taskName" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="date">Date:</label>
+                            <input type="date" id="date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="timeCharge">Time Charge (hours):</label>
+                            <input type="number" id="timeCharge" step="0.1" min="0" required>
+                        </div>
+                        <input type="hidden" id="taskId"> <!-- Hidden field for task ID -->
+                        <button type="submit">Submit Timesheet</button>
+                    </form>
+                </div>
+            </div>
+            
+
+            <!-- Review Section -->
+            <div class="card-wrapper review-color">
+                <div class="card-wrapper__header">
+                    <div class="backlog-name">Review</div>
+                    <div class="backlog-dots" onclick="toggleCardsVisibility(this)">
+                        <i class="material-icons">expand_more</i>
+                    </div>
+                </div>
+                <div class="cards" id="reviewCards" ondragover="handleDragOver(event)" ondrop="handleDrop(event, 'Review')">
+                    {% for task in tasks if task.status == 'Review' %}
+                    <div class="card {{ task.priority }}-color" draggable="true" ondragstart="handleDragStart('{{ task._id }}')"
+                    onclick="openReviewModal('{{ task._id }}', '{{ task.description }}', '{{ task.user }}', '{{ task.timeEstimate }}', '{{ task.actualTime }}')">
+                        <div class="card__header">
+                            <div class="card__header-priority">Priority level: {{ task.priority }}</div>
+                            <div class="card__header-clear" onclick="deleteTask('{{ task._id }}')">
+                                <i class="material-icons">clear</i>
+                            </div>
+                        </div>
+                        <div class="card__text">{{ task.description }}</div>
+
+                        <div class="card__meta">
+                            <div class="due-date">
+                                <div class="meta-icon">
+                                    <i class="material-icons">event</i>
+                                </div>
+                                <div class="meta-text">Due Date: {{ task.formatted_dueDate }}</div>
+                            </div>
+                            <div class="estimated-time">
+                                <div class="meta-icon">
+                                    <i class="material-icons">access_time</i>
+                                </div>
+                                <div class="meta-text">Estimated Time: {{ task.timeEstimate }} hours</div>
+                            </div>
+                        </div>
+
+                        <div class="card__menu">
+                            <div class="card__menu-left">
+                                <div class="comments-wrapper">
+                                    <div class="comments-ico"><i class="material-icons">comment</i></div>
+                                    <div class="comments-num">{{ task.comments }}</div>
+                                </div>
+                                <div class="attach-wrapper">
+                                    <div class="attach-ico"><i class="material-icons">attach_file</i></div>
+                                    <div class="attach-num">{{ task.attach }}</div>
+                                </div>
+                            </div>
+                            <div class="card__menu-right">
+                                <div class="img-avatar">
+                                    <img src="{{ url_for('static', filename='images/' + task.avatar) }}" alt="{{ task.user }}" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Review Modal -->
+            <div id="reviewModal" class="modal">
+                <div class="modal-content">
+                    <span class="close" onclick="closeReviewModal()">&times;</span>
+                    <h2>Review Task</h2>
+                    <form id="reviewForm" onsubmit="submitReview(); return false;">
+                        <div class="form-group">
+                            <label for="review_taskName">Task Name:</label>
+                            <input type="text" id="review_taskName" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="review_preparerName">Preparer:</label>
+                            <input type="text" id="review_preparerName" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="review_timeEstimate">Estimated Time:</label>
+                            <input type="text" id="review_timeEstimate" readonly> <span>hours</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="review_actualTime">Actual Time:</label>
+                            <input type="text" id="review_actualTime" readonly> <span>hours</span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="accuracyMark">Accuracy Mark (1-100):</label>
+                            <input type="number" id="accuracyMark" min="1" max="100" required>
+                        </div>
+                        <input type="hidden" id="taskId"> <!-- Hidden field for task ID -->
+                        <button type="submit">Submit Review</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Completed Section -->
+            <div class="card-wrapper complete-color">
+                <div class="card-wrapper__header">
+                    <div class="backlog-name">Completed</div>
+                    <div class="backlog-dots" onclick="toggleCardsVisibility(this)">
+                        <i class="material-icons">expand_more</i>
+                    </div>
+                </div>
+                <div class="cards" id="completeCards" ondragover="handleDragOver(event)" ondrop="handleDrop(event, 'Completed')">
+                    {% for task in tasks if task.status == 'Completed' %}
+                    <div class="card {{ task.priority }}-color" draggable="true" ondragstart="handleDragStart('{{ task._id }}')">
+                        <div class="card__header">
+                            <div class="card__header-priority">Priority level: {{ task.priority }}</div>
+                            <div class="card__header-clear" onclick="deleteTask('{{ task._id }}')">
+                                <i class="material-icons">clear</i>
+                            </div>
+                        </div>
+                        <div class="card__text">{{ task.description }}</div>
+
+                        <div class="card__meta">
+                            <div class="due-date">
+                                <div class="meta-icon">
+                                    <i class="material-icons">event</i>
+                                </div>
+                                <div class="meta-text">Due Date: {{ task.formatted_dueDate }}</div>
+                            </div>
+                            <div class="estimated-time">
+                                <div class="meta-icon">
+                                    <i class="material-icons">access_time</i>
+                                </div>
+                                <div class="meta-text">Estimated Time: {{ task.timeEstimate }} hours</div>
+                            </div>
+                        </div>
+
+                        <div class="card__menu">
+                            <div class="card__menu-left">
+                                <div class="comments-wrapper">
+                                    <div class="comments-ico"><i class="material-icons">comment</i></div>
+                                    <div class="comments-num">{{ task.comments }}</div>
+                                </div>
+                                <div class="attach-wrapper">
+                                    <div class="attach-ico"><i class="material-icons">attach_file</i></div>
+                                    <div class="attach-num">{{ task.attach }}</div>
+                                </div>
+                            </div>
+                            <div class="card__menu-right">
+                                <div class="img-avatar">
+                                    <img src="{{ url_for('static', filename='images/' + task.avatar) }}" alt="{{ task.user }}" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+
+        <!-- Selection Menu -->
+        <div id="kanbanMainSelect" class="kanban__main-select" style="display: none;">
+          <div class="main-select">
+            <div class="select-wrapper-main">
+              <div class="select-text-main">Add reports</div>
+              <div class="select-event-note-main">
+                <i class="material-icons">dashboard</i>
+              </div>
+            </div>
+            <div class="select-wrapper">
+              <div class="select-text">Add scheduled task</div>
+              <div class="select-event-note">
+                <i class="material-icons">event_note</i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notification container -->
+        <div id="notification" class="notification-container">
+            <div class="notification-content">
+                <i class="material-icons notification-icon">check_circle</i>
+                <div class="notification-text">Task added successfully!</div>
+                <span class="close-notification" onclick="closeNotification()">×</span>
+            </div>
+        </div>
+
+
+      </section>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='task.js') }}"></script>
+</body>
+</html>

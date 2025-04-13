@@ -1,0 +1,141 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    box-sizing: border-box;
+    background: url('images/signup.jpg') no-repeat center center fixed;
+    background-size: cover;
+}
+
+.flex-r, .flex-c {
+    justify-content: center;
+    align-items: center;
+    display: flex;
+}
+
+.flex-c {
+    flex-direction: column;
+}
+
+.flex-r {
+    flex-direction: row;
+}
+
+.container {
+    width: 100%;
+    min-height: 100vh;
+    padding: 20px 10px;
+}
+
+.signup-wrapper {
+    background-color: rgba(0, 0, 0, 0.8); /* Semi-transparent black background */
+    width: 400px; /* Increased size for consistency */
+    display: flex;
+    flex-direction: column;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.signup-text {
+    padding: 20px;
+    color: white;
+    text-align: center;
+}
+
+.logo span, .logo span i {
+    font-size: 25px;
+    color: #FF7722;
+}
+
+.signup-text h1, .signup-text p {
+    margin-bottom: 10px;
+}
+
+.input-box {
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.label {
+    font-size: 15px;
+    color: white;
+    margin-bottom: 5px;
+}
+
+.input {
+    background-color: #333;
+    padding: 5px;
+    border: 2px solid rgba(216, 216, 216, 1);
+    border-radius: 10px;
+    overflow: hidden;
+    justify-content: flex-start;
+}
+
+input {
+    border: none;
+    outline: none;
+    padding: 5px;
+    background-color: #333;
+    color: white;
+    flex: 1;
+}
+
+.input i {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.btn {
+    color: white;
+    border-radius: 30px;
+    padding: 10px 15px;
+    background: linear-gradient(122.33deg, #68bed1 30.62%, #1E94E9 100%);
+    font-size: 16px;
+    transition: all 0.3s linear;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(122.33deg, #5ca9be 30.62%, #1b82d3 100%);
+}
+
+.alert {
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+}
+
+.alert-success {
+    color: #3c763d;
+    background-color: #dff0d8;
+    border-color: #d6e9c6;
+}
+
+.alert-danger {
+    color: #a94442;
+    background-color: #f2dede;
+    border-color: #ebccd1;
+}
+
+.alert-warning {
+    color: #8a6d3b;
+    background-color: #fcf8e3;
+    border-color: #faebcc;
+}
+
+.alert-info {
+    color: #31708f;
+    background-color: #d9edf7;
+    border-color: #bce8f1;
+}

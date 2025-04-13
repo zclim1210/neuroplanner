@@ -1,0 +1,361 @@
+/* Styles for the leave record board, summary, and modal */
+.leave-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: 'Inter', sans-serif;
+}
+
+.leave-container h1 {
+    text-align: center;
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+.leave-summary {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 30px;
+}
+
+.summary-item {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    flex: 1;
+    margin: 0 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.summary-item img {
+    width: 24px;
+    height: 24px;
+    margin-bottom: 10px;
+}
+
+.summary-item p {
+    font-size: 14px;
+    color: #666;
+}
+
+.summary-item span {
+    display: block;
+    font-size: 24px;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+.leave-details {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 30px;
+}
+
+.details-item {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    flex: 1;
+    margin: 0 10px;
+}
+
+.details-item h3 {
+    margin-bottom: 15px;
+}
+
+.holidays ul {
+    list-style: none;
+    padding: 0;
+}
+
+.holidays li {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.holidays span:nth-child(1) {
+    flex: 1;
+    text-align: left;
+}
+
+.holidays span:nth-child(2) {
+    flex: 1;
+    text-align: center;
+}
+
+.holidays span:nth-child(3) {
+    flex: 1;
+    text-align: right;
+    font-weight: bold;
+}
+
+.pay-schedule-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.schedule {
+    text-align: left;
+    margin-bottom: 10px;
+}
+
+.schedule p {
+    margin: 5px 0;
+    font-weight: bold;
+}
+
+.schedule span {
+    margin-bottom: 10px;
+    display: block;
+    font-size: 14px;
+    color: #666;
+}
+
+.pay-schedule-content button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    background-color: #007bff;
+    color: white;
+    transition: background-color 0.3s ease;
+}
+
+.pay-schedule-content button:hover {
+    background-color: #0056b3;
+}
+
+.employee .pie-chart {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    margin: 0 auto;
+}
+
+.chart-legend {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.chart-legend div {
+    margin-right: 20px;
+}
+
+.legend-color {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    margin-right: 5px;
+}
+
+.legend-color.office {
+    background-color: #36a2eb;
+}
+
+.legend-color.home {
+    background-color: #ffcd56;
+}
+
+.legend-color.contract {
+    background-color: #ff6384;
+}
+
+.day-status .status-options {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.status-option {
+    text-align: center;
+    cursor: pointer;
+    transition: color 0.3s, background-color 0.3s;
+    background-color: #2995a8;
+    border-radius: 8px;
+    padding: 10px;
+    width: 80px;
+}
+
+.status-option:hover {
+    background-color: #e0e0e0;
+}
+
+.status-option i {
+    font-size: 24px;
+    color: #ffffff;
+}
+
+.status-option span {
+    display: block;
+    margin-top: 5px;
+    font-size: 14px;
+}
+
+.leave-applications {
+    margin-top: 30px;
+}
+
+.leave-applications h3 {
+    margin-bottom: 15px;
+    font-size: 20px;
+}
+
+.leave-applications table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.leave-applications th, .leave-applications td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.leave-applications th {
+    background-color: #f5f5f5;
+    font-weight: bold;
+}
+
+.leave-applications td.rejected {
+    color: #ff5722;
+    font-weight: bold;
+}
+
+/* Leave Request Modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgb(0,0,0);
+    background-color: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 600px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
+.form-group input[type="checkbox"] {
+    width: auto;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.save-draft {
+    background-color: #f0ad4e;
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background-color 0.3s;
+}
+
+.submit {
+    background-color: #007bff;
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background-color 0.3s;
+}
+
+.save-draft:hover,
+.submit:hover {
+    background-color: #0056b3;
+}
+
+/* Modern Button Styles */
+button {
+    background-color: #007bff;
+    border: none;
+    color: white;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+button:hover {
+    background-color: #0056b3;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+button i {
+    margin-right: 5px;
+}

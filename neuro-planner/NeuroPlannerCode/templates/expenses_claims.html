@@ -1,0 +1,688 @@
+{% extends 'base.html' %}
+
+{% block title %}Expenses Claims{% endblock %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='expenses_claims.css') }}">
+<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/@mdi/font@4.9.95/css/materialdesignicons.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+{% endblock %}
+
+{% block content %}
+
+<!-- Notification Message -->
+<div id="notification" class="notification">
+    <p id="notificationMessage"></p>
+</div>
+
+<div class="expense-summary-header">
+    <h2>Expense Summary</h2>
+    <div class="date-picker">
+        <p>1 Jan 2024 - 31 Dec 2024</p>
+    </div>
+</div>
+<div class="summary-cards">
+    <div class="card">
+        <i class="mdi mdi-credit-card-outline"></i>
+        <div>
+            <h3>Total Paid</h3>
+            <p>${{ summary.total_paid }}</p>
+        </div>
+    </div>
+    <div class="card">
+        <i class="mdi mdi-checkbox-marked-circle-outline"></i>
+        <div>
+            <h3>Approved</h3>
+            <p>${{ summary.approved_expense }}</p>
+        </div>
+    </div>
+    <div class="card">
+        <i class="mdi mdi-timer-sand"></i>
+        <div>
+            <h3>Pending</h3>
+            <p>${{ summary.pending_expense }}</p>
+        </div>
+    </div>
+    <div class="card">
+        <i class="mdi mdi-close-circle-outline"></i>
+        <div>
+            <h3>Declined</h3>
+            <p>${{ summary.declined_expense }}</p>
+        </div>
+    </div>
+</div>
+
+<div class="expense-trends">
+    <h3>Expense Trends</h3>
+    <div class="chart-container">
+        <canvas id="expenseChart"></canvas> <!-- Full-width, responsive chart -->
+    </div>
+</div>
+
+<div class="filters-container">
+    <div class="filters">
+        <div class="filter-dropdown">
+            <button class="filter-button">Engagement</button>
+            <div class="dropdown-content" id="engagementDropdown">
+                <!-- Engagement options will be dynamically populated -->
+            </div>
+        </div>
+        <div class="filter-dropdown">
+            <button class="filter-button">Category</button>
+            <div class="dropdown-content">
+                <label><input type="checkbox" name="category" value="Travel"> Travel</label>
+                <label><input type="checkbox" name="category" value="OT Meal Allowances"> OT Meal Allowances</label>
+                <label><input type="checkbox" name="category" value="Stationery"> Stationery</label>
+                <label><input type="checkbox" name="category" value="Client Entertainment"> Client Entertainment</label>
+                <label><input type="checkbox" name="category" value="Software Purchase"> Software Purchase</label>
+                <label><input type="checkbox" name="category" value="Accommodation"> Accommodation</label>
+            </div>
+        </div>
+        <div class="filter-dropdown">
+            <button class="filter-button">Status</button>
+            <div class="dropdown-content">
+                <label><input type="checkbox" name="status" value="Pending"> Pending</label>
+                <label><input type="checkbox" name="status" value="Approved"> Approved</label>
+                <label><input type="checkbox" name="status" value="Paid"> Paid</label>
+                <label><input type="checkbox" name="status" value="Declined"> Declined</label>
+            </div>
+        </div>
+        <div class="filter-dropdown">
+            <button class="filter-button">Date Range</button>
+            <div class="dropdown-content">
+                <input type="date" id="startDate" name="startDate">
+                <input type="date" id="endDate" name="endDate">
+                <button onclick="applyDateFilter()">Apply</button>
+            </div>
+        </div>
+    </div>
+    <button class="clear-filters-button" onclick="clearAllFilters()">Clear All Filters</button>
+</div>
+
+<div class="expenses-table-header">
+    <h3>Expenses</h3>
+    <div class="table-buttons">
+        <button id="generateReportBtn" class="table-button"><i class="fas fa-file-alt"></i> Generate Report</button>
+        <button id="addExpenseBtn" class="table-button"><i class="fas fa-plus"></i></button>
+    </div>
+</div>
+
+<table class="expenses-table">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Engagement</th>
+            <th>Category</th>
+            <th>Amount</th>
+            <th>Attachment</th>
+            <th>Status</th>
+            <th>Reviewer</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for claim in expense_claims %}
+        <tr>
+            <td>{{ claim.date }}</td>
+            <td>{{ claim.engagement_name }}</td>
+            <td>{{ claim.category }}</td>
+            <td>${{ claim.amount }}</td>
+            <td>
+                {% if claim.attachment %}
+                <a href="{{ url_for('static', filename='uploads/' + claim.attachment) }}" target="_blank">
+                    <i class="mdi mdi-file-document-outline"></i>
+                </a>
+                {% else %}
+                N/A
+                {% endif %}
+            </td>
+            <td><span class="status-badge {{ claim.status|lower }}">{{ claim.status }}</span></td>
+            <td>{{ claim.reviewer_name }}</td>
+            <td>
+                {% if claim.status in ['Pending'] %}
+                <button class="table-button macos-button" onclick="showDeleteModal('{{ claim._id }}')">Delete</button>
+                <button class="table-button macos-button" onclick="showModifyModal('{{ claim._id }}')">Modify</button>
+                {% else %}
+                No action allowed
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<!-- Generate Report Modal -->
+<div id="generateReportModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Select Engagement</h2>
+        <form id="generateReportForm">
+            <div class="form-group">
+                <label for="engagementReportSelect">Engagement</label>
+                <select id="engagementReportSelect" name="engagement_id" required>
+                    <!-- Engagement options will be populated here -->
+                </select>
+            </div>
+            <button type="submit" class="btn-submit">
+                Generate
+                <span id="modalLoadingIcon" class="loading-icon" style="display: none;">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </span>
+                <span id="modalSuccessIcon" class="success-icon" style="display: none;">
+                    <i class="fas fa-check"></i>
+                </span>
+            </button>
+        </form>
+    </div>
+</div>
+
+
+<!-- Add New Claim Modal -->
+<div id="addExpenseModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>New Claim</h2>
+        <form id="expenseForm" enctype="multipart/form-data">
+            <div class="amount-display">
+                <input type="number" id="amount" name="amount" placeholder="0.00" step="0.01" required>
+                <span class="currency">SGD</span>
+            </div>
+            <div class="form-group">
+                <label for="expenseDate">Date</label>
+                <input type="date" id="expenseDate" name="date" required>
+            </div>
+            <div class="form-group">
+                <label for="engagementSelect">Engagement</label>
+                <select id="engagementSelect" name="engagement_id" required></select>
+            </div>
+            <div class="form-group">
+                <label for="category">Category</label>
+                <select id="category" name="category" required>
+                    <option value="Travel">Travel</option>
+                    <option value="OT Meal Allowances">OT Meal Allowances</option>
+                    <option value="Stationery">Stationery</option>
+                    <option value="Client Entertainment">Client Entertainment</option>
+                    <option value="Software Purchase">Software Purchase</option>
+                    <option value="Accommodation">Accommodation</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="description">Description</label>
+                <input type="text" id="description" name="description" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="attachment">Attachment</label>
+                <input type="file" id="attachment" name="attachment" required>
+            </div>
+            <button type="submit" class="btn-submit">Add Claim</button>
+        </form>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="modal">
+    <div class="modal-content macos-modal">
+        <span class="close">&times;</span>
+        <h2>Confirm Delete</h2>
+        <p>Are you sure you want to delete this expense claim?</p>
+        <button id="confirmDeleteBtn" class="macos-button danger">Confirm</button>
+        <button id="cancelDeleteBtn" class="macos-button">Cancel</button>
+    </div>
+</div>
+
+<!-- Modify Expense Modal -->
+<div id="modifyExpenseModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Modify Claim</h2>
+        <form id="modifyExpenseForm" enctype="multipart/form-data">
+            <input type="hidden" id="modifyExpenseId" name="expense_id">
+            <div class="amount-display">
+                <input type="number" id="modifyAmount" name="amount" placeholder="0.00" step="0.01" required>
+                <span class="currency">SGD</span>
+            </div>
+            <div class="form-group">
+                <label for="modifyExpenseDate">Date</label>
+                <input type="date" id="modifyExpenseDate" name="date" required>
+            </div>
+            <div class="form-group">
+                <label for="modifyEngagementSelect">Engagement</label>
+                <select id="modifyEngagementSelect" name="engagement_id" required></select>
+            </div>
+            <div class="form-group">
+                <label for="modifyCategory">Category</label>
+                <select id="modifyCategory" name="category" required>
+                    <option value="Travel">Travel</option>
+                    <option value="OT Meal Allowances">OT Meal Allowances</option>
+                    <option value="Stationery">Stationery</option>
+                    <option value="Client Entertainment">Client Entertainment</option>
+                    <option value="Software Purchase">Software Purchase</option>
+                    <option value="Accommodation">Accommodation</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="modifyDescription">Description</label>
+                <input type="text" id="modifyDescription" name="description" placeholder="Optional">
+            </div>
+            <div class="form-group">
+                <label for="modifyAttachment">Attachment</label>
+                <input type="file" id="modifyAttachment" name="attachment">
+            </div>
+            <button type="submit" class="btn-submit">Save Changes</button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+    console.log("Document is fully loaded and ready.");
+
+    // Load chart data and render
+    const monthlyExpenses = JSON.parse('{{ monthly_expenses | tojson | safe }}');
+    console.log("Monthly expenses data:", monthlyExpenses);
+
+    const labels = Object.keys(monthlyExpenses);
+    const data = Object.values(monthlyExpenses);
+    console.log("Chart labels:", labels);
+    console.log("Chart data:", data);
+
+    var ctx = document.getElementById('expenseChart').getContext('2d');
+    console.log("Canvas context retrieved:", ctx);
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Expenses',
+                data: data,
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 2,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { beginAtZero: true },
+                y: { beginAtZero: true }
+            }
+        }
+    });
+    console.log("Chart has been rendered.");
+
+    const tableRows = document.querySelectorAll('.expenses-table tbody tr');
+    console.log("Table rows selected:", tableRows);
+
+    function applyFilters() {
+        console.log("Applying filters...");
+
+        const selectedEngagements = Array.from(document.querySelectorAll("input[name='engagement']:checked")).map(cb => cb.value);
+        const selectedCategories = Array.from(document.querySelectorAll("input[name='category']:checked")).map(cb => cb.value);
+        const selectedStatuses = Array.from(document.querySelectorAll("input[name='status']:checked")).map(cb => cb.value);
+        const startDate = document.getElementById("startDate").value;
+        const endDate = document.getElementById("endDate").value;
+
+        console.log("Selected engagements:", selectedEngagements);
+        console.log("Selected categories:", selectedCategories);
+        console.log("Selected statuses:", selectedStatuses);
+        console.log("Start date:", startDate);
+        console.log("End date:", endDate);
+
+        tableRows.forEach(row => {
+            const rowEngagement = row.querySelector('td:nth-child(2)').textContent.trim();
+            const rowCategory = row.querySelector('td:nth-child(3)').textContent.trim();
+            const rowStatus = row.querySelector('td:nth-child(6)').textContent.trim();
+            const rowDate = row.querySelector('td:nth-child(1)').textContent.trim();
+
+            console.log("Row data:", {
+                rowEngagement,
+                rowCategory,
+                rowStatus,
+                rowDate
+            });
+
+            let showRow = true;
+
+            if (selectedEngagements.length && !selectedEngagements.includes(rowEngagement)) {
+                showRow = false;
+            }
+            if (selectedCategories.length && !selectedCategories.includes(rowCategory)) {
+                showRow = false;
+            }
+            if (selectedStatuses.length && !selectedStatuses.includes(rowStatus)) {
+                showRow = false;
+            }
+            if (startDate && new Date(rowDate) < new Date(startDate)) {
+                showRow = false;
+            }
+            if (endDate && new Date(rowDate) > new Date(endDate)) {
+                showRow = false;
+            }
+
+            row.style.display = showRow ? '' : 'none';
+            console.log("Row visibility set to:", showRow ? 'visible' : 'hidden');
+        });
+        console.log("Filters applied.");
+    }
+
+    document.getElementById("startDate").addEventListener("change", applyFilters);
+    document.getElementById("endDate").addEventListener("change", applyFilters);
+    document.querySelectorAll("input[type='checkbox']").forEach(checkbox => {
+        checkbox.addEventListener("change", applyFilters);
+    });
+    console.log("Event listeners added for filters.");
+
+    // Dynamically populate engagement dropdown
+    const engagements = Array.from(new Set(Array.from(tableRows).map(row => row.querySelector('td:nth-child(2)').textContent.trim())));
+    console.log("Engagements extracted from table:", engagements);
+
+    const engagementDropdown = document.getElementById("engagementDropdown");
+    engagements.forEach(engagement => {
+        const label = document.createElement('label');
+        label.innerHTML = `<input type="checkbox" name="engagement" value="${engagement}"> ${engagement}`;
+        engagementDropdown.appendChild(label);
+    });
+    console.log("Engagement dropdown populated.");
+
+    engagementDropdown.addEventListener("change", applyFilters);
+
+    // Fetch engagements for dropdown
+    fetch('/show_all_engagements')
+        .then(response => {
+            console.log("Received response from /show_all_engagements:", response);
+            return response.json();
+        })
+        .then(data => {
+            console.log("Engagements fetched:", data);
+            let engagementSelect = document.getElementById('engagementSelect');
+            let modifyEngagementSelect = document.getElementById('modifyEngagementSelect');
+            let reviewerField = document.createElement('input');
+            reviewerField.type = 'hidden';
+            reviewerField.name = 'reviewer_id';
+            engagementSelect.parentNode.appendChild(reviewerField);
+
+            data.forEach(engagement => {
+                let option = document.createElement('option');
+                option.value = engagement.id;
+                option.textContent = engagement.name;
+                option.setAttribute('data-manager-id', engagement.manager_id);
+                engagementSelect.appendChild(option);
+                modifyEngagementSelect.appendChild(option.cloneNode(true));
+            });
+            console.log("Engagement dropdowns populated.");
+
+            // Update reviewer_id when an engagement is selected
+            engagementSelect.addEventListener('change', function() {
+                let selectedOption = engagementSelect.options[engagementSelect.selectedIndex];
+                reviewerField.value = selectedOption.getAttribute('data-manager-id');
+                console.log("Reviewer ID updated to:", reviewerField.value);
+            });
+
+            modifyEngagementSelect.addEventListener('change', function() {
+                let selectedOption = modifyEngagementSelect.options[modifyEngagementSelect.selectedIndex];
+                document.querySelector('input[name="reviewer_id"]').value = selectedOption.getAttribute('data-manager-id');
+                console.log("Modify Reviewer ID updated to:", document.querySelector('input[name="reviewer_id"]').value);
+            });
+
+            // Set the initial reviewer_id
+            if (engagementSelect.options.length > 0) {
+                let selectedOption = engagementSelect.options[engagementSelect.selectedIndex];
+                reviewerField.value = selectedOption.getAttribute('data-manager-id');
+                console.log("Initial reviewer ID set to:", reviewerField.value);
+            }
+        })
+        .catch(error => console.error("Error fetching engagements:", error));
+
+    document.getElementById('expenseForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        console.log("Expense form submitted.");
+
+        let formData = new FormData(this);
+        console.log("FormData prepared for submission:", formData);
+
+        fetch('/record_expense', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log("Response from /record_expense:", data);
+            if (data.success) {
+                showNotification("Expense recorded successfully!");
+                setTimeout(function() {
+                    location.reload();
+                }, 1000);
+            } else {
+                alert("Failed to record expense: " + data.message);
+            }
+        });
+    });
+
+    var addExpenseModal = document.getElementById('addExpenseModal');
+    var modifyExpenseModal = document.getElementById('modifyExpenseModal');
+    var deleteModal = document.getElementById('deleteModal');
+    var addExpenseBtn = document.getElementById('addExpenseBtn');
+
+    addExpenseBtn.onclick = function() {
+        console.log("Add expense button clicked.");
+        addExpenseModal.style.display = "block";
+    };
+
+    var closeButtons = document.getElementsByClassName('close');
+    Array.from(closeButtons).forEach(function(btn) {
+        btn.onclick = function() {
+            console.log("Close button clicked.");
+            addExpenseModal.style.display = "none";
+            modifyExpenseModal.style.display = "none";
+            deleteModal.style.display = "none";
+            generateReportModal.style.display = "none";
+        }
+    });
+
+    window.onclick = function(event) {
+        if (event.target === addExpenseModal) {
+            console.log("Clicked outside add expense modal, closing modal.");
+            addExpenseModal.style.display = "none";
+        } else if (event.target === modifyExpenseModal) {
+            console.log("Clicked outside modify expense modal, closing modal.");
+            modifyExpenseModal.style.display = "none";
+        } else if (event.target === deleteModal) {
+            console.log("Clicked outside delete modal, closing modal.");
+            deleteModal.style.display = "none";
+        } else if (event.target === generateReportModal) {
+            console.log("Clicked outside generate report modal, closing modal.");
+            generateReportModal.style.display = "none";
+        }
+    };
+
+    var confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    var cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+    var expenseIdToDelete = null;
+
+    window.showDeleteModal = function(expenseId) {
+        console.log("Show delete modal for expense ID:", expenseId);
+        expenseIdToDelete = expenseId;
+        deleteModal.style.display = "block";
+    };
+
+    confirmDeleteBtn.onclick = function() {
+        console.log("Confirm delete button clicked for expense ID:", expenseIdToDelete);
+        fetch('/delete_expense/' + expenseIdToDelete, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log("Response from /delete_expense:", data);
+            if (data.success) {
+                deleteModal.style.display = "none";
+                showNotification("Expense claim has been removed successfully.");
+                setTimeout(function() {
+                    location.reload();
+                }, 3000);
+            } else {
+                alert("Failed to delete expense: " + data.message);
+            }
+        });
+    };
+
+    cancelDeleteBtn.onclick = function() {
+        console.log("Cancel delete button clicked.");
+        deleteModal.style.display = "none";
+    };
+
+    window.showModifyModal = function(expenseId) {
+        console.log("Show modify modal for expense ID:", expenseId);
+        fetch(`/get_expense/${expenseId}`)
+            .then(response => response.json())
+            .then(data => {
+                console.log("Fetched expense data for modification:", data);
+                document.getElementById('modifyExpenseId').value = data._id;
+                document.getElementById('modifyAmount').value = data.amount;
+                document.getElementById('modifyExpenseDate').value = data.date;
+                document.getElementById('modifyEngagementSelect').value = data.engagement_id;
+                document.getElementById('modifyCategory').value = data.category;
+                document.getElementById('modifyDescription').value = data.description;
+
+                modifyExpenseModal.style.display = "block";
+            });
+    };
+
+    document.getElementById('modifyExpenseForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        console.log("Modify form submitted.");
+
+        let formData = new FormData(this);
+        console.log("FormData prepared for modification submission:", formData);
+
+        fetch('/modify_expense', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log("Response from /modify_expense:", data);
+            if (data.success) {
+                modifyExpenseModal.style.display = "none";
+                showNotification("Expense claim has been updated successfully.");
+                setTimeout(function() {
+                    location.reload();
+                }, 3000);
+            } else {
+                alert("Failed to modify expense: " + data.message);
+            }
+        });
+    });
+
+    var generateReportModal = document.getElementById('generateReportModal');
+    var generateReportBtn = document.getElementById('generateReportBtn');
+
+    generateReportBtn.onclick = function() {
+        console.log("Generate report button clicked.");
+        generateReportModal.style.display = "block";
+        populateEngagementDropdown();
+    };
+
+    document.getElementById('generateReportForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    var generateButton = document.querySelector('#generateReportForm .btn-submit');
+    var loadingIcon = document.getElementById('modalLoadingIcon');
+    var successIcon = document.getElementById('modalSuccessIcon');
+
+    // Show loading spinner and disable the button
+    generateButton.classList.add('loading');
+    loadingIcon.style.display = 'inline-block';
+    generateButton.disabled = true;
+
+    var formData = new FormData(this);
+    var engagementId = formData.get('engagement_id');
+
+    // Simulate the report generation process with a loading delay
+    setTimeout(function () {
+        // Hide loading spinner and show success icon (tick)
+        loadingIcon.style.display = 'none';
+        successIcon.style.display = 'inline-block';
+        generateButton.classList.remove('loading');
+        generateButton.classList.add('success');
+
+        // Wait for a short moment to show the success icon, then generate the report
+        setTimeout(function () {
+            // Open the report in a new tab
+            window.open(`/generate-expense-report?engagement_id=${engagementId}`, '_blank');
+
+            // Close the modal
+            generateReportModal.style.display = "none";
+
+            // Reset the button and icons after the modal is closed (optional)
+            setTimeout(function () {
+                successIcon.style.display = 'none';
+                generateButton.classList.remove('success');
+                generateButton.disabled = false;
+            }, 1500); // Short delay before resetting the button
+
+        }, 1000); // Show the success icon for 1 second before proceeding
+
+    }, 1000); // Simulate a 1-second loading time
+});
+
+
+
+    function populateEngagementDropdown() {
+        fetch('/get_engagements_for_report')
+            .then(response => {
+                console.log("Received response from /get_engagements_for_report:", response);
+                return response.json();
+            })
+            .then(data => {
+                console.log("Engagements fetched for report generation:", data);
+                const engagementSelect = document.getElementById('engagementReportSelect');
+                engagementSelect.innerHTML = data.map(engagement => 
+                    `<option value="${engagement.id}">${engagement.name}</option>`).join('');
+            })
+            .catch(error => console.error('Error fetching engagements for report:', error));
+    }
+
+    function showNotification(message) {
+        console.log("Showing notification with message:", message);
+        var notification = document.getElementById('notification');
+        var notificationMessage = document.getElementById('notificationMessage');
+
+        notificationMessage.textContent = message;
+        notification.style.display = 'block';
+
+        notification.addEventListener('animationend', function() {
+            notification.style.display = 'none';
+        }, { once: true });
+    }
+});
+
+function applyDateFilter() {
+    console.log("Date filter applied.");
+    applyFilters();
+}
+
+function clearAllFilters() {
+    console.log("Clearing all filters.");
+    document.querySelectorAll("input[type='checkbox']").forEach(checkbox => {
+        checkbox.checked = false;
+    });
+
+    document.getElementById("startDate").value = '';
+    document.getElementById("endDate").value = '';
+
+    document.querySelectorAll('.expenses-table tbody tr').forEach(row => {
+        row.style.display = '';
+    });
+    console.log("All filters cleared.");
+}
+
+</script>
+{% endblock %}

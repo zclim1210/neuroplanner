@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR Employee Approval and Update</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='hr.css') }}">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+
+<h2>HR - Approve and Update User Profile</h2>
+
+<div class="container">
+    <!-- Message to display when there are no pending users -->
+    <div id="noPendingUsersMessage" class="no-users-message" style="display: none;">
+        <p>No pending users found for approval.</p>
+    </div>
+
+    <!-- HR Form (hidden if no pending users are found) -->
+    <form id="hrForm" class="macos-form" style="display: none;">
+        <div class="logout">
+            <button type="button" class="macos-button danger" onclick="logout()">Logout</button>
+        </div>
+
+        <label for="pendingUsers">Select User (Pending Approval):</label>
+        <select id="pendingUsers" name="pendingUsers" onchange="loadUserData()" required>
+            <option value="">Select a User</option>
+        </select>
+
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" readonly>
+
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" readonly>
+
+        <label for="role">Role:</label>
+        <select id="role" name="role" required onchange="handleRoleChange()">
+            <option value="">Select Role</option>
+            <option value="Partner">Partner</option>
+            <option value="Manager">Manager</option>
+            <option value="Associate">Associate</option>
+        </select>
+
+        <label for="salary">Salary:</label>
+        <input type="number" id="salary" name="salary">
+
+        <label for="photo">Photo (Upload):</label>
+        <input type="file" id="photo" name="photo" accept="image/*">
+
+        <label for="color">Color (for Partners only):</label>
+        <div style="display: flex; align-items: center;">
+            <input type="color" id="color" name="color" disabled onchange="updateColorPreview()">
+            <div id="colorPreview" class="color-preview"></div>
+        </div>
+
+        <label for="lineManager">Line Manager:</label>
+        <select id="lineManager" name="lineManager" disabled>
+            <option value="">Select Line Manager</option>
+        </select>
+
+        <button type="submit" class="macos-button">Update Profile</button>
+    </form>
+</div>
+
+<!-- Notification container for profile update success -->
+<div id="profileUpdateNotification" class="notification-container">
+    <div class="notification-content">
+        <i class="material-icons notification-icon">check_circle</i>
+        <div class="notification-text">User profile updated successfully!</div>
+        <span class="close-notification" onclick="closeProfileUpdateNotification()">×</span>
+    </div>
+</div>
+
+<script>
+    async function fetchPendingUsers() {
+        const response = await fetch('/api/pending_users');
+        const users = await response.json();
+        const pendingUsersDropdown = document.getElementById("pendingUsers");
+
+        if (users.length === 0) {
+            // No pending users found: show the message and hide the form
+            document.getElementById("noPendingUsersMessage").style.display = "block";
+            document.getElementById("hrForm").style.display = "none";
+            return;
+        }
+
+        // Populate dropdown if there are pending users
+        document.getElementById("hrForm").style.display = "block";
+        users.forEach(user => {
+            const option = document.createElement("option");
+            option.value = user._id;
+            option.textContent = user.name;
+            pendingUsersDropdown.appendChild(option);
+        });
+    }
+
+    async function loadUserData() {
+        const userId = document.getElementById("pendingUsers").value;
+        if (!userId) return;
+
+        const response = await fetch(`/api/user/${userId}`);
+        const user = await response.json();
+
+        document.getElementById("name").value = user.name;
+        document.getElementById("email").value = user.email;
+        document.getElementById("role").value = user.role;
+        document.getElementById("salary").value = user.salary || '';
+        document.getElementById("color").value = user.color || '';
+        document.getElementById("lineManager").value = user.lineManager || '';
+
+        updateColorPreview();
+        handleRoleChange();
+    }
+
+    function updateColorPreview() {
+        const color = document.getElementById("color").value;
+        document.getElementById("colorPreview").style.backgroundColor = color;
+    }
+
+    async function handleRoleChange() {
+        const role = document.getElementById("role").value;
+        const colorField = document.getElementById("color");
+        const lineManagerField = document.getElementById("lineManager");
+
+        colorField.disabled = role !== "Partner";
+        lineManagerField.disabled = false;
+
+        lineManagerField.innerHTML = '<option value="">Select Line Manager</option>';
+
+        if (role === "Associate") {
+            const managers = await fetch('/api/managers');
+            (await managers.json()).forEach(manager => {
+                const option = document.createElement("option");
+                option.value = manager._id;
+                option.textContent = manager.name;
+                lineManagerField.appendChild(option);
+            });
+        } else if (role === "Manager" || role === "Partner") {
+            const partners = await fetch('/api/partners');
+            (await partners.json()).forEach(partner => {
+                const option = document.createElement("option");
+                option.value = partner._id;
+                option.textContent = partner.name;
+                lineManagerField.appendChild(option);
+            });
+        }
+    }
+
+    document.getElementById("hrForm").addEventListener("submit", async function(event) {
+        event.preventDefault();
+        const userId = document.getElementById("pendingUsers").value;
+        const formData = new FormData(this);
+        formData.append("userId", userId);
+
+        const response = await fetch('/api/update_user', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+        if (result.status === "success") {
+            showProfileUpdateNotification();
+            setTimeout(() => window.location.reload(), 2000); // Reload the page after showing the notification
+        } else {
+            alert(result.message);
+        }
+    });
+
+    function showProfileUpdateNotification() {
+        const notification = document.getElementById("profileUpdateNotification");
+        notification.classList.add("show");
+        setTimeout(closeProfileUpdateNotification, 5000);
+    }
+
+    function closeProfileUpdateNotification() {
+        const notification = document.getElementById("profileUpdateNotification");
+        notification.classList.remove("show");
+    }
+
+    function logout() {
+        window.location.href = "{{ url_for('views.logout') }}";
+    }
+
+    fetchPendingUsers();
+</script>
+
+</body>
+</html>

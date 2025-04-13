@@ -1,0 +1,318 @@
+.partner-photo-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 5px;
+}
+
+.partner-photo-container img {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid #fff;
+}
+
+.partner-photo-container img:hover {
+    cursor: pointer;
+}
+
+.calendar-row {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #ccc;
+}
+
+.day-label {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    position: relative;
+}
+
+.day-label .day-number {
+    display: block;
+    margin-top: 5px;
+    font-size: 14px;
+}
+
+.day-label .underline {
+    width: 20px;
+    height: 2px;
+    background: #000;
+    margin: 0 auto;
+    margin-top: 5px;
+}
+
+.calendar-cell {
+    flex: 1;
+    border-right: 1px solid #ccc;
+    padding: 10px;
+    text-align: center;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100px; /* Set a consistent height */
+    cursor: pointer;
+}
+
+.calendar-cell img {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin-top: 5px;
+}
+
+.calendar-cell.empty-cell {
+    border: 2px dashed #ccc;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.calendar-cell.empty-cell .plus-sign {
+    font-size: 20px;
+    color: #ccc;
+}
+
+/* Highlight the current day */
+.day-label.today {
+    background-color: #5624bb; /* Green background for the current day */
+    border-radius: 12px;
+    color: #fff; /* White text color for better contrast */
+    font-weight: bold; /* Bold text for emphasis */
+    padding: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Add a subtle shadow */
+}
+
+
+
+.nav-button, .calendar-button, .submit-button {
+    background-color: #007bff;
+    border: none;
+    color: white;
+    padding: 8px 16px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 14px;
+    margin: 4px 2px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background-color 0.3s;
+}
+
+.calendar-button.active {
+    background-color: #000000;
+    color: #ffffff;
+}
+
+.nav-button:hover, .calendar-button:hover, .submit-button:hover {
+    background-color: #0056b3;
+}
+
+/* Search input styles */
+.search-input {
+    border-radius: 20px;
+    padding: 8px 15px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    transition: border-color 0.3s;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #000000;
+}
+
+/* Navigation and search container styles */
+.navigation-search-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 10px 0;
+}
+
+/* Engagement cell styles */
+.engagement-cell {
+    border-left: 5px solid; /* Bold bar on the left */
+    padding: 10px;
+    text-align: left;
+    background-color: rgba(0, 0, 0, 0.1); /* Default light background color */
+}
+
+.engagement-cell .engagement-name {
+    font-weight: bold;
+}
+
+.engagement-cell .engagement-partner {
+    font-size: 12px;
+    color: #666;
+}
+
+.engagement-cell img {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin-left: 5px;
+}
+
+/* Modal container */
+.modal {
+    display: none; 
+    position: fixed; 
+    z-index: 1; 
+    left: 0;
+    top: 0;
+    width: 100%; 
+    height: 100%; 
+    overflow: auto; 
+    background-color: rgb(0,0,0); 
+    background-color: rgba(0,0,0,0.4); 
+}
+
+/* Modal content */
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto; 
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%; 
+    max-width: 600px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+/* Close button */
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Form styling */
+.date-input {
+    margin-bottom: 10px;
+}
+
+.date-input label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.date-input input {
+    width: calc(50% - 10px);
+    padding: 8px;
+    margin-right: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.form-actions button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    background-color: #007bff;
+    color: white;
+    transition: background-color 0.3s ease;
+}
+
+.form-actions button:hover {
+    background-color: #0056b3;
+}
+
+/* Circle Add button */
+.btn-add-date {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    font-size: 24px;
+    margin: 10px 0;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.btn-add-date:hover {
+    background-color: #0056b3;
+}
+
+/* Modal header */
+.modal-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.modal-header .user-photo {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    margin-right: 20px;
+}
+
+.modal-header .user-info h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.modal-header .user-info p {
+    margin: 0;
+    color: #888;
+    font-size: 14px;
+}
+
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.form-group select,
+.form-group input {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    width: 100%;
+}
+
+/* Dustbin styling */
+.dustbin {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    font-size: 40px;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.dustbin:hover {
+    transform: scale(1.2);
+}

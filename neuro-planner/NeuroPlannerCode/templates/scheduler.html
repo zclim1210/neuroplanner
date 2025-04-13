@@ -1,0 +1,713 @@
+{% extends 'base.html' %}
+
+{% block title %}Scheduler{% endblock %}
+
+{% block extra_styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='scheduler.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<h1>Work Schedule</h1>
+<div class="view-controls">
+    <div class="view-buttons">
+        <button id="personalCalendar" class="calendar-button" onclick="changeCalendarType('personal')">Personal Calendar</button>
+        <button id="companyCalendar" class="calendar-button active" onclick="changeCalendarType('company')">Company Calendar</button>
+        <button id="engagementCalendar" class="calendar-button" onclick="changeCalendarType('engagement')">Engagement Calendar</button>
+    </div>
+    <div class="navigation-search-container">
+        <div class="navigation-buttons">
+            <button id="prevWeekButton" class="nav-button" onclick="navigateWeek(-1)">&lt;</button>
+            <span id="currentPeriod"></span>
+            <button id="nextWeekButton" class="nav-button" onclick="navigateWeek(1)">&gt;</button>
+            <button id="todayButton" class="nav-button" onclick="goToToday()">Today</button>
+        </div>
+        <input type="text" id="searchScheduler" class="search-input" placeholder="Search" oninput="filterSchedule()">
+        <button id="plotCalendarButton" class="calendar-button" onclick="openPlotModal()">Plot Calendar</button>
+    </div>
+</div>
+
+<!-- Add the dustbin icon -->
+<div id="dustbin" class="dustbin">
+    🗑️
+</div>
+
+<!-- Plot Calendar Modal Structure -->
+<div id="plotModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closePlotModal()">&times;</span>
+        <h3>Plot Calendar</h3>
+        <form id="plotForm">
+            <div class="form-group">
+                <label for="engagement">Engagement:</label>
+                <select id="engagement" name="engagement"></select>
+            </div>
+
+            <div class="form-group">
+                <label for="staffLevel">Staff Level:</label>
+                <select id="staffLevel" name="staffLevel" onchange="fetchStaff()">
+                    <option value="Partner">Partner</option>
+                    <option value="Manager">Manager</option>
+                    <option value="Senior Associate">Senior Associate</option>
+                    <option value="Associate">Associate</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="staff">Staff:</label>
+                <select id="staff" name="staff"></select>
+            </div>
+
+            <div class="form-group">
+                <label for="section">Section:</label>
+                <select id="section" name="section">
+                    <option value="Planning">Planning</option>
+                    <option value="Fieldwork">Fieldwork</option>
+                    <option value="Concluding">Concluding</option>
+                </select>
+            </div>
+
+            <div id="plotDateInputs" class="form-group">
+                <label for="date_0">Date:</label>
+                <input type="date" id="date_0" name="date">
+            </div>
+            <button type="button" class="btn-add-date" onclick="addDateInput()">+</button>
+            <button type="button" class="submit-button" onclick="submitPlot()">Submit</button>
+        </form>
+    </div>
+</div>
+
+<!-- Modal for Multiple Day Swap Requests -->
+<div id="swapModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeSwapModal()">&times;</span>
+        <div class="modal-header">
+            <img id="user-photo" src="{{ url_for('static', filename='images/default_user.png') }}" alt="User Photo" class="user-photo">
+            <div class="user-info">
+                <h3 id="engagement-name">To-do list workspace</h3>
+                <p id="employee-name">Ardyan</p>
+                <p id="employee-role">Owner</p>
+            </div>
+        </div>
+        <div class="modal-body">
+            <form id="swapForm">
+                <div id="dateInputs">
+                    <div class="date-input">
+                        <label for="from_date_0">From Date:</label>
+                        <input type="date" id="from_date_0" name="from_date">
+                        <label for="to_date_0">To Date:</label>
+                        <input type="date" id="to_date_0" name="to_date">
+                    </div>
+                </div>
+                <button type="button" class="btn-add-date" onclick="addDateRange()">+</button>
+                <label for="swapWithEmployee">Swap With:</label>
+                <select id="swapWithEmployee" name="swapWithEmployee">
+                    <!-- Options will be populated dynamically -->
+                </select>
+                <div class="form-actions">
+                    <button type="button" class="submit-button" onclick="submitSwapRequest()">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="scheduler">
+    <div class="calendar-body" id="calendarBody">
+        <!-- Calendar header and entries will be dynamically inserted here -->
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let currentStartDate = new Date();
+let originalScheduleData = null;
+const swapModal = document.getElementById("swapModal");
+
+document.addEventListener('DOMContentLoaded', function() {
+    goToToday();
+    initializeDragAndDrop();
+    initializeModal();
+    initializeDustbin();
+});
+
+function initializeDragAndDrop() {
+    document.querySelectorAll('.calendar-cell').forEach(cell => {
+        cell.addEventListener('dragstart', handleDragStart);
+        cell.addEventListener('dragover', handleDragOver);
+        cell.addEventListener('drop', handleDrop);
+        cell.addEventListener('click', handleCellClick); // Add click event listener
+    });
+}
+
+function handleDragStart(e) {
+    e.dataTransfer.setData('text/plain', e.target.id);
+    e.dataTransfer.effectAllowed = 'move';
+    showDustbin(); // Show dustbin when dragging start
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    const id = e.dataTransfer.getData('text/plain');
+    const draggedElement = document.getElementById(id);
+    const targetElement = e.target.closest('.calendar-cell'); // Ensure we get the target cell
+    const targetDate = targetElement.getAttribute('data-date');
+    const targetEmployeeId = targetElement.getAttribute('data-employee-id');
+    const targetEngagementId = targetElement.getAttribute('data-engagement-id'); // Add engagement ID
+
+    if (draggedElement && targetDate && targetEmployeeId) {
+        const fromDate = draggedElement.getAttribute('data-date');
+        const fromEmployeeId = draggedElement.getAttribute('data-employee-id');
+        const engagementId = draggedElement.getAttribute('data-engagement-id');
+
+        const formattedFromDate = formatDate(fromDate);
+        const formattedToDate = formatDate(targetDate);
+
+        const swapRequest = {
+            from_date: formattedFromDate,
+            to_date: formattedToDate,
+            from_employee_id: fromEmployeeId, // Source employee ID
+            to_employee_id: targetEmployeeId, // Target employee ID
+            engagement_id: engagementId
+        };
+
+        fetch('/amend_schedule', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ swap_requests: [swapRequest] })
+        }).then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert(data.message)
+                location.reload();
+            }
+        }).catch(error => {
+            console.error('Error:', error);
+        });
+
+        e.target.appendChild(draggedElement);
+    }
+}
+
+function handleCellClick(e) {
+    const cell = e.target.closest('.calendar-cell');
+    const date = cell.getAttribute('data-date');
+    const employeeId = cell.getAttribute('data-employee-id');
+    const engagementId = cell.getAttribute('data-engagement-id');
+    const employeeName = cell.getAttribute('data-employee-name');
+    const employeeRole = cell.getAttribute('data-employee-role');
+    const engagementName = engagementId ? cell.getAttribute('data-engagement-name') : 'Empty';
+    const photoUrl = cell.getAttribute('data-photo-url') || "{{ url_for('static', filename='images/default_user.png') }}";
+
+    if (engagementId || cell.classList.contains('empty-cell')) {
+        openSwapModal(employeeName, employeeRole, engagementName, photoUrl, date, employeeId, engagementId);
+    }
+}
+
+function openSwapModal(employeeName, employeeRole, engagementName, photoUrl, date, employeeId, engagementId) {
+    document.getElementById("user-photo").src = photoUrl;
+    document.getElementById("engagement-name").textContent = engagementName;
+    document.getElementById("employee-name").textContent = employeeName;
+    document.getElementById("employee-role").textContent = employeeRole;
+    document.getElementById("from_date_0").value = date;
+    document.getElementById("to_date_0").value = date;
+    document.getElementById("swapWithEmployee").dataset.currentEmployeeId = employeeId;
+    document.getElementById("swapWithEmployee").dataset.engagementId = engagementId; // Set the engagement ID in the dataset
+
+    fetchEmployeeOptions();
+
+    swapModal.style.display = "block";
+}
+
+function closeSwapModal() {
+    document.getElementById('dateInputs').innerHTML = `
+        <div class="date-input">
+            <label for="from_date_0">From Date:</label>
+            <input type="date" id="from_date_0" name="from_date">
+            <label for="to_date_0">To Date:</label>
+            <input type="date" id="to_date_0" name="to_date">
+        </div>
+    `;
+    swapModal.style.display = "none";
+}
+
+function initializeModal() {
+    const closeBtn = document.querySelector(".modal .close");
+    closeBtn.addEventListener('click', closeSwapModal);
+}
+
+function addDateRange() {
+    const dateInputsContainer = document.getElementById('dateInputs');
+    const newIndex = dateInputsContainer.children.length;
+    const newDateInput = document.createElement('div');
+    newDateInput.classList.add('date-input');
+    newDateInput.innerHTML = `
+        <label for="from_date_${newIndex}">From Date:</label>
+        <input type="date" id="from_date_${newIndex}" name="from_date">
+        <label for="to_date_${newIndex}">To Date:</label>
+        <input type="date" id="to_date_${newIndex}" name="to_date">
+    `;
+    dateInputsContainer.appendChild(newDateInput);
+}
+
+function submitSwapRequest() {
+    const swapRequests = [];
+    const swapWithEmployee = document.getElementById("swapWithEmployee").value;
+
+    document.querySelectorAll('.date-input').forEach((input, index) => {
+        const from_date = document.getElementById(`from_date_${index}`).value;
+        const to_date = document.getElementById(`to_date_${index}`).value;
+
+        swapRequests.push({
+            from_date: formatDate(from_date),
+            to_date: formatDate(to_date),
+            from_employee_id: document.getElementById("swapWithEmployee").dataset.currentEmployeeId,
+            to_employee_id: swapWithEmployee,
+            engagement_id: document.getElementById("swapWithEmployee").dataset.engagementId // Use the dataset attribute to get engagement ID
+        });
+    });
+
+    fetch('/amend_schedule', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ swap_requests: swapRequests })
+    }).then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            closeSwapModal();
+            location.reload();
+        } else {
+            alert(data.message);
+            location.reload();
+        }
+    }).catch(error => {
+        console.error('Error:', error);
+    });
+}
+
+function fetchEmployeeOptions() {
+    fetch('/get_employee_options')
+        .then(response => response.json())
+        .then(data => {
+            const swapWithEmployeeSelect = document.getElementById('swapWithEmployee');
+            swapWithEmployeeSelect.innerHTML = data.map(emp => `<option value="${emp.id}">${emp.name}</option>`).join('');
+        })
+        .catch(error => console.error('Error fetching employee options:', error));
+}
+
+function fetchSchedulerData(view = 'week', startDate = null) {
+    if (!startDate) {
+        startDate = currentStartDate;
+    }
+    const dateRange = getDefaultDateRange(view, startDate);
+
+    fetch(`/get_scheduler_data?view=${view}&dateRange=${dateRange}`)
+        .then(response => response.json())
+        .then(data => {
+            originalScheduleData = data;
+            renderScheduler(data, view);
+            updateCurrentPeriodLabel(data.startDate, data.endDate); // Use the dates from data
+            addPartnerPhotos(data); // Add partner photos after rendering scheduler
+            initializeDragAndDrop(); // Reinitialize drag and drop
+        })
+        .catch(error => console.error('Error fetching scheduler data:', error));
+}
+
+function renderScheduler(data, view) {
+    const calendarBody = document.getElementById('calendarBody');
+    const startDate = new Date(data.startDate);
+    const endDate = new Date(data.endDate);
+
+    calendarBody.innerHTML = '';
+
+    const daysOfWeek = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+    const headerRow = document.createElement('div');
+    headerRow.classList.add('calendar-row');
+
+    const employeeHeader = document.createElement('div');
+    employeeHeader.classList.add('day-label');
+    employeeHeader.textContent = 'Employee';
+    headerRow.appendChild(employeeHeader);
+
+    for (let i = 0; i < 7; i++) {
+        const dayDate = new Date(startDate.getTime() + (i * 24 * 60 * 60 * 1000));
+        const dayOfMonth = dayDate.getDate();
+        const isToday = dayDate.toDateString() === new Date().toDateString();
+
+        const dayLabel = document.createElement('div');
+        dayLabel.classList.add('day-label');
+        if (isToday) dayLabel.classList.add('today');
+        dayLabel.innerHTML = `<span>${daysOfWeek[i]}</span><br><span class="day-number">${dayOfMonth}</span><div class="underline">_</div>`;
+
+        headerRow.appendChild(dayLabel);
+    }
+    calendarBody.appendChild(headerRow);
+
+    data.schedule.forEach(employee => {
+        const row = document.createElement('div');
+        row.classList.add('calendar-row');
+
+        const employeeCell = document.createElement('div');
+        employeeCell.classList.add('calendar-cell');
+        employeeCell.innerHTML = `<img src="{{ url_for('static', filename='images/') }}${employee.photo}" alt="${employee.name}">${employee.name}`;
+        row.appendChild(employeeCell);
+
+        employee.schedule.forEach(day => {
+            const cell = document.createElement('div');
+            cell.classList.add('calendar-cell');
+            const employeeId = employee._id;
+
+            if (day.engagementName) {
+                const cellColor = day.partnerColor || '#ccc';
+                cell.classList.add('engagement-cell');
+                cell.style.borderLeftColor = cellColor;
+                cell.style.backgroundColor = adjustColorOpacity(cellColor, 0.1);
+                cell.innerHTML = `<span class="engagement-name">${day.engagementName}</span><br><span class="engagement-partner">Partner: </span>`;
+                cell.setAttribute('data-employee-id', day.employeeId);
+                cell.setAttribute('data-engagement-id', day.engagementId || '');
+                cell.setAttribute('data-employee-name', employee.name);
+                cell.setAttribute('data-employee-role', employee.role);
+                cell.setAttribute('data-engagement-name', day.engagementName);
+                cell.setAttribute('data-photo-url', `{{ url_for('static', filename='images/') }}${employee.photo}`);
+            } else {
+                cell.classList.add('empty-cell');
+                cell.innerHTML = `<span class="plus-sign">+</span>`;
+                cell.setAttribute('data-employee-id', employeeId);
+                cell.setAttribute('data-engagement-id', '');
+                cell.setAttribute('data-employee-name', employee.name);
+                cell.setAttribute('data-employee-role', employee.role);
+                cell.setAttribute('data-photo-url', `{{ url_for('static', filename='images/') }}${employee.photo}`);
+            }
+            cell.setAttribute('draggable', true);
+            cell.setAttribute('id', `cell-${employeeId}-${day.date}`);
+            cell.setAttribute('data-date', day.date);
+            row.appendChild(cell);
+        });
+
+        calendarBody.appendChild(row);
+    });
+}
+
+function addPartnerPhotos(data) {
+    const calendarBody = document.getElementById('calendarBody');
+    data.schedule.forEach(employee => {
+        const rows = calendarBody.getElementsByClassName('calendar-row');
+        const employeeRow = Array.from(rows).find(row => row.firstChild && row.firstChild.textContent.trim() === employee.name);
+
+        if (employeeRow) {
+            employee.schedule.forEach((day, index) => {
+                const cell = employeeRow.children[index + 1];
+                if (day.engagementName && day.partnerPhoto) {
+                    const partnerPhotoHTML = `<div class="partner-photo-container">
+                        <img src="{{ url_for('static', filename='images/') }}${day.partnerPhoto}" class="partner-photo" title="${day.partnerName}">
+                    </div>`;
+                    cell.innerHTML += partnerPhotoHTML;
+                }
+            });
+        }
+    });
+}
+
+function filterSchedule() {
+    const searchTerm = document.getElementById('searchScheduler').value.toLowerCase();
+    if (!originalScheduleData) return;
+
+    const filteredData = JSON.parse(JSON.stringify(originalScheduleData));
+    filteredData.schedule = filteredData.schedule.filter(employee => {
+        const matchesEmployeeName = employee.name.toLowerCase().includes(searchTerm);
+        const matchesEngagement = employee.schedule.some(day => day.engagementName && day.engagementName.toLowerCase().includes(searchTerm));
+
+        return matchesEmployeeName || matchesEngagement;
+    });
+
+    renderScheduler(filteredData, 'week');
+    addPartnerPhotos(filteredData);
+}
+
+function changeCalendarType(type) {
+    document.querySelectorAll('.calendar-button').forEach(button => {
+        button.classList.remove('active');
+    });
+    document.getElementById(type + 'Calendar').classList.add('active');
+    fetchSchedulerData(type);
+}
+
+function changeView(view) {
+    fetchSchedulerData(view);
+}
+
+function goToToday() {
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    const dayOfWeek = today.getDay();
+    const daysSinceMonday = (dayOfWeek + 6) % 7;
+    startOfWeek.setDate(today.getDate() - daysSinceMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
+    currentStartDate = startOfWeek;
+    fetchSchedulerData('week', startOfWeek);
+}
+
+function navigateWeek(offset) {
+    currentStartDate.setDate(currentStartDate.getDate() + (offset * 7));
+    fetchSchedulerData('week', currentStartDate);
+}
+
+function getDefaultDateRange(view, startDate = null) {
+    const today = new Date();
+    let start, end;
+
+    if (!startDate) {
+        startDate = today;
+    }
+
+    if (view === 'week') {
+        const dayOfWeek = (startDate.getDay() + 6) % 7;
+        start = new Date(startDate);
+        start.setDate(startDate.getDate() - dayOfWeek);
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+    } else if (view === 'month') {
+        start = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+        end = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+    } else {
+        start = new Date(startDate.getFullYear(), 0, 1);
+        end = new Date(startDate.getFullYear(), 11, 31);
+    }
+
+    return `${start.toISOString().slice(0, 10)} to ${end.toISOString().slice(0, 10)}`;
+}
+
+function updateCurrentPeriodLabel(startDate, endDate) {
+    const currentPeriod = document.getElementById('currentPeriod');
+    currentPeriod.textContent = `${formatDate(new Date(startDate))} - ${formatDate(new Date(endDate))}`;
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = ('0' + (date.getMonth() + 1)).slice(-2);
+    const day = ('0' + date.getDate()).slice(-2);
+    return `${year}-${month}-${day}`;
+}
+
+function formatDateToDisplay(dateString) {
+    const date = new Date(dateString);
+    const options = { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' };
+    return date.toLocaleDateString(undefined, options);
+}
+
+function adjustColorOpacity(hex, opacity) {
+    let c;
+    if(/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) {
+        c = hex.substring(1).split('');
+        if(c.length == 3){
+            c = [c[0], c[0], c[1], c[1], c[2], c[2]];
+        }
+        c = '0x' + c.join('');
+        return `rgba(${(c>>16)&255}, ${(c>>8)&255}, ${c&255}, ${opacity})`;
+    }
+    throw new Error('Bad Hex');
+}
+// area for plot button modal
+let dateInputCount = 1;
+
+function openPlotModal() {
+    console.log("Opening Plot Modal");
+    document.getElementById('plotModal').style.display = 'block';
+    fetchEngagements();
+    console.log("Plot Modal opened, engagements fetched");
+}
+
+function closePlotModal() {
+    console.log("Closing Plot Modal");
+    document.getElementById('plotModal').style.display = 'none';
+    document.getElementById('plotForm').reset();
+    resetPlotDateInputs();
+    dateInputCount = 1; // Reset dateInputCount
+    console.log("Plot Modal closed and form reset");
+}
+
+function resetPlotDateInputs() {
+    console.log("Resetting plot date inputs");
+    const dateInputsContainer = document.getElementById('plotDateInputs');
+    dateInputsContainer.innerHTML = `
+        <div class="date-input">
+            <label for="date_0">Date:</label>
+            <input type="date" id="date_0" name="date_0">
+        </div>
+    `;
+    console.log("Plot date inputs reset");
+}
+
+function addDateInput() {
+    console.log("Adding new date input");
+    const dateInputsContainer = document.getElementById('plotDateInputs');
+    const newDateInput = document.createElement('div');
+    newDateInput.classList.add('date-input');
+    newDateInput.innerHTML = `
+        <label for="date_${dateInputCount}">Date:</label>
+        <input type="date" id="date_${dateInputCount}" name="date_${dateInputCount}">
+    `;
+    dateInputsContainer.appendChild(newDateInput);
+    dateInputCount++;
+    console.log("New date input added, dateInputCount:", dateInputCount);
+}
+
+function fetchEngagements() {
+    console.log("Fetching engagements");
+    fetch('/get_engagements')
+        .then(response => response.json())
+        .then(data => {
+            console.log("Engagements fetched:", data);
+            const engagementSelect = document.getElementById('engagement');
+            engagementSelect.innerHTML = data.map(engagement => 
+                `<option value="${engagement.id}">${engagement.name}</option>`).join('');
+        })
+        .catch(error => console.error('Error fetching engagements:', error));
+}
+
+function fetchStaff() {
+    const staffLevel = document.getElementById('staffLevel').value;
+    console.log(`Fetching staff for level: ${staffLevel}`);
+    fetch(`/get_staff?level=${staffLevel}`)
+        .then(response => response.json())
+        .then(data => {
+            console.log("Staff fetched:", data);
+            const staffSelect = document.getElementById('staff');
+            staffSelect.innerHTML = data.map(staff => 
+                `<option value="${staff.id}">${staff.name}</option>`).join('');
+        })
+        .catch(error => console.error('Error fetching staff:', error));
+}
+
+
+function submitPlot() {
+    console.log("Submitting plot");
+    const form = document.getElementById('plotForm');
+    const formData = new FormData(form);
+    const plotData = {
+        engagement: formData.get('engagement'),
+        staffLevel: formData.get('staffLevel'),
+        staff: formData.get('staff'),
+        section: formData.get('section'),
+        dates: []
+    };
+
+    // Collect all date inputs with detailed debugging
+    for (let i = 0; i < dateInputCount; i++) {
+        const dateInput = document.getElementById(`date_${i}`);
+        if (dateInput) {
+            const date = dateInput.value;
+            console.log(`Checking date_${i}:`, date); // Debugging each date input
+            if (date) {
+                plotData.dates.push(date);
+            } else {
+                alert('Please fill in all date fields');
+                console.error('Date field is empty:', `date_${i}`);
+                return;
+            }
+        } else {
+            console.error(`Date input element date_${i} not found`);
+            return;
+        }
+    }
+
+    console.log("Plot data to be submitted:", plotData);
+
+    fetch('/plot_calendar', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(plotData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Plotting successful!');
+            console.log("Plotting successful");
+            closePlotModal();
+            location.reload();
+        } else {
+            alert('Error plotting calendar: ' + data.message);
+            location.reload();
+            console.error('Error plotting calendar:', data.message);
+        }
+    })
+    .catch(error => console.error('Error plotting calendar:', error));
+}
+
+function initializeDustbin() {
+    const dustbin = document.getElementById('dustbin');
+    dustbin.addEventListener('dragover', handleDustbinDragOver);
+    dustbin.addEventListener('drop', handleDustbinDrop);
+    hideDustbin(); // Hide dustbin initially
+}
+
+function handleDustbinDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+}
+
+function handleDustbinDrop(e) {
+    e.preventDefault();
+    const id = e.dataTransfer.getData('text/plain');
+    const draggedElement = document.getElementById(id);
+    if (draggedElement) {
+        const employmentId = draggedElement.getAttribute('data-employee-id');
+        const date = draggedElement.getAttribute('data-date');
+        const engagementId = draggedElement.getAttribute('data-engagement-id');
+
+        // Perform deletion logic here
+        fetch('/delete_schedule', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                employmentId: employmentId,
+                date: date,
+                engagementId: engagementId
+            })
+        }).then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert(data.message);
+            }
+        }).catch(error => {
+            console.error('Error:', error);
+        });
+
+        // Remove the element visually
+        draggedElement.parentNode.removeChild(draggedElement);
+    }
+}
+
+function showDustbin() {
+    const dustbin = document.getElementById('dustbin');
+    dustbin.style.display = 'block';
+}
+
+function hideDustbin() {
+    const dustbin = document.getElementById('dustbin');
+    dustbin.style.display = 'none';
+}
+</script>
+{% endblock %}
